@@ -3,8 +3,11 @@ var router = express.Router();
 
 const userQueries = require("../models/queries/userQueries");
 const pool = require("../models/dbConnect");
+const { createToken } = require("../utils/auth/auth");
 
 const { signup } = require("../models/auth/signup");
+const { login } = require("../models/auth/login");
+
 // 회원가입
 router.post("/signup", async (req, res) => {
   // 1. 클라이언트에게 데이터를 전달 받음
@@ -14,6 +17,7 @@ router.post("/signup", async (req, res) => {
   const user = await signup(nickname, email, password, profile_img);
 
   // 3. pool 연결 후 쿼리 실행
+  const conn = await getConnection();
   pool.getConnection((err, conn) => {
     if (err) {
       console.error("MySQL 연결 에러:", err);
@@ -36,6 +40,38 @@ router.post("/signup", async (req, res) => {
       res.send("회원가입 성공");
     });
   });
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { email, password } = req.body;
+    // 2. login 로직에서 email, password 검증
+    const user = await login(email, password);
+    const tokenMaxAge = 60 * 60 * 24 * 3;
+    const token = createToken(user, tokenMaxAge);
+
+    user.token = token;
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      maxAge: tokenMaxAge * 1000,
+    });
+
+    const userData = {
+      nickname: user.nickname,
+      profile_img: user.profile_img,
+      cash: user.cash,
+      total_assets: user.total_assets,
+      level: user.level,
+      type: user.type,
+    };
+    res.status(201).json(userData);
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    next(err);
+  }
 });
 
 module.exports = router;
