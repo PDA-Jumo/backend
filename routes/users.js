@@ -3,10 +3,13 @@ var router = express.Router();
 
 const userQueries = require("../models/queries/userQueries");
 const pool = require("../models/dbConnect");
-const { createToken } = require("../utils/auth/auth");
+const { createToken, authenticate } = require("../utils/auth/auth");
 
 const { signup } = require("../models/auth/signup");
 const { login } = require("../models/auth/login");
+
+// authToken 키
+const authTokenKey = process.env.AUTH_TOKEN_KEY || "authToken";
 
 // 회원가입
 router.post("/signup", async (req, res) => {
@@ -17,7 +20,6 @@ router.post("/signup", async (req, res) => {
   const user = await signup(nickname, email, password, profile_img);
 
   // 3. pool 연결 후 쿼리 실행
-  const conn = await getConnection();
   pool.getConnection((err, conn) => {
     if (err) {
       console.error("MySQL 연결 에러:", err);
@@ -42,6 +44,7 @@ router.post("/signup", async (req, res) => {
   });
 });
 
+// 로그인
 router.post("/login", async (req, res) => {
   try {
     // 1. 사용자에게 email, password 받음
@@ -51,9 +54,10 @@ router.post("/login", async (req, res) => {
     const tokenMaxAge = 60 * 60 * 24 * 3;
     const token = createToken(user, tokenMaxAge);
 
+    // 3. cookie에 담을지, user의 body에 담을지 고민
     user.token = token;
 
-    res.cookie("authToken", token, {
+    res.cookie(authTokenKey, token, {
       httpOnly: true,
       maxAge: tokenMaxAge * 1000,
     });
@@ -67,6 +71,35 @@ router.post("/login", async (req, res) => {
       type: user.type,
     };
     res.status(201).json(userData);
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    next(err);
+  }
+});
+
+// 로그아웃
+// 쿠키를 사용할 때 maxAge 옵션은 쿠키의 수명을 결정
+// maxAge의 값은 밀리초 단위로 설정되며, 이 값이 얼마나 되느냐에 따라 브라우저가 쿠키를 얼마나 오래 보관할지 결정
+// maxAge를 0으로 설정하면, 쿠키의 수명이 0밀리초로 설정된다.
+// 즉, 쿠키가 생성되자마자 만료된다.
+// 브라우저는 만료된 쿠키를 즉시 삭제하거나 다음 요청 때 무시하는 방식으로 처리함.
+// 따라서, maxAge: 0을 설정하면, 해당 쿠키는 클라이언트에 저장되자마자 바로 삭제되는 효과를 가짐.
+
+// httpOnly: true 옵션은 해당 쿠키가 HTTP(S) 요청에만 포함되어야 하며, 클라이언트 측 스크립트(예: JavaScript)에서 접근할 수 없다는 것을 나타냅니다.
+// 이 옵션은 쿠키의 보안을 강화하기 위해 사용되지만, 쿠키의 수명이나 삭제 여부에는 직접적인 영향을 주지 않습니다.
+
+router.all("/logout", authenticate, async (req, res, next) => {
+  try {
+    // authToken을 키값으로 가지는 token을 ""로 변경한 후 보낸다. 그러면
+    res.cookie(authTokenKey, "", {
+      httpOnly: true,
+      maxAge: 0,
+    });
+
+    res.status(204).json({
+      message: "logout 완료",
+    });
   } catch (err) {
     console.error(err);
     res.status(400);
