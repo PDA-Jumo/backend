@@ -1,7 +1,7 @@
 var express = require("express")
 var router = express.Router();
 var axios = require("axios");
-const { crawlingLiveSise } = require("../utils/crawling/KOSPI");
+var cheerio = require("cheerio");
 
 const searchstockQueries = require("../models/queries/stock/searchstockQueries")
 const pool = require("../models/dbConnect")
@@ -52,12 +52,64 @@ router.get("/issue", async (req, res, next) => {
 });
 
 // 코스피 코스닥 지수, (개인/외국인/기관) 정보
-// router.get("/liveSise", async(req, res, next)=>{
-//   try {
-//     const liveSise = await crawlingLiveSise();
+router.get("/liveSise", async (req, res, next) => {
+  try {
+    const crawlingLiveSise = async () => {
+      const siseData = await axios
+        .get("https://finance.naver.com/")
+        .then((res) => {
+          const $ = cheerio.load(res.data);
+          const kospiNum1 = $(".kospi_area").find(".num_quot .num").text();
+          const kospiNum2 = $(".kospi_area").find(".num_quot .num2").text();
+          const kospiNum3 = $(".kospi_area").find(".num_quot .num3").text();
 
-//   }
-// })
+          const kospiLiveInfo = $(".kospi_area").find(".dl dd");
+          const kospiPerson = kospiLiveInfo.eq(0).find("a").text();
+          const kospiForeigner = kospiLiveInfo.eq(1).find("a").text();
+          const kospiCompany = kospiLiveInfo.eq(2).find("a").text();
+
+          const kosdaqNum1 = $(".kosdaq_area").find(".num_quot .num").text();
+          const kosdaqNum2 = $(".kosdaq_area").find(".num_quot .num2").text();
+          const kosdaqNum3 = $(".kosdaq_area").find(".num_quot .num3").text();
+
+          const kosdaqLiveInfo = $(".kosdaq_area").find(".dl dd");
+          const kosdaqPerson = kosdaqLiveInfo.eq(0).find("a").text();
+          const kosdaqForeigner = kosdaqLiveInfo.eq(1).find("a").text();
+          const kosdaqCompany = kosdaqLiveInfo.eq(2).find("a").text();
+
+          let kospi = {
+            num1: kospiNum1,
+            num2: kospiNum2,
+            num3: kospiNum3,
+            person: kospiPerson,
+            foreigner: kospiForeigner,
+            company: kospiCompany,
+          };
+
+          let kosdaq = {
+            num1: kosdaqNum1,
+            num2: kosdaqNum2,
+            num3: kosdaqNum3,
+            person: kosdaqPerson,
+            foreigner: kosdaqForeigner,
+            company: kosdaqCompany,
+          };
+          let result = {
+            kospi,
+            kosdaq,
+          };
+          return result;
+        });
+
+      return siseData;
+    };
+    const liveSise = await crawlingLiveSise();
+    res.json(liveSise);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
  
 
