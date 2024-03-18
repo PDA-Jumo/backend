@@ -7,6 +7,7 @@ const { createToken, authenticate } = require("../utils/auth/auth");
 
 const { signup } = require("../models/auth/signup");
 const { login } = require("../models/auth/login");
+const axios = require("axios");
 
 // authToken 키
 const authTokenKey = process.env.AUTH_TOKEN_KEY || "authToken";
@@ -63,6 +64,7 @@ router.post("/login", async (req, res) => {
     });
 
     const userData = {
+      id: user.id,
       nickname: user.nickname,
       profile_img: user.profile_img,
       cash: user.cash,
@@ -108,6 +110,27 @@ router.all("/logout", authenticate, async (req, res, next) => {
 });
 
 module.exports = router;
+
+// async function getMarket() {
+//   let config = {
+//     method: "get",
+//     maxBodyLength: Infinity,
+//     url: "https://gapi.shinhaninvest.com:8443/openapi/v1.0/strategy/market-issue",
+//     headers: {
+//       apiKey: "l7xxR7Fe0dP3i8KPZaPKpknI2vWrMeJfwDpk",
+//       "Access-Control-Allow-Origin": "*",
+//     },
+//   };
+
+//   axios
+//     .request(config)
+//     .then((response) => {
+//       console.log(response.data.dataBody.list);
+//     })
+//     .catch((error) => {
+//       console.log(error);
+//     });
+// }
 
 // async function signup(nickname, email, password, profile_img) {
 //   // 1. `bcrypt.genSalt()`를 호출하여 salt 객체 생성.
