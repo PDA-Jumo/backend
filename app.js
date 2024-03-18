@@ -10,6 +10,8 @@ var testRouter = require("./routes/test");
 var stockRouter = require("./routes/stock");
 var portfolioRouter = require("./routes/portfolio")
 
+
+
 var app = express();
 
 app.use(logger("dev"));
