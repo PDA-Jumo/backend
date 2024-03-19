@@ -1,9 +1,8 @@
 var express = require("express")
 var router = express.Router();
 var axios = require("axios");
-const { crawlingLiveSise } = require("../utils/crawling/KOSPI");
-
 const searchstockQueries = require("../models/queries/stock/searchstockQueries")
+
 const pool = require("../models/dbConnect")
 
 //종목 검색
@@ -14,7 +13,9 @@ router.get("/search", function(req, res, next){
             return;
         }
 
-        conn.query(searchstockQueries.searchstockQueries, [req.query.stock_name], (err,results)=>{
+        let stockName = '%' + req.query.stock_name + '%';
+
+        conn.query(searchstockQueries.searchstockQueries, [stockName], (err,results)=>{
             conn.release();
             
             if(err){
@@ -58,6 +59,7 @@ router.get("/issue", async (req, res, next) => {
 
 //   }
 // })
+
 
  
 
