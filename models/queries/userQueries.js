@@ -11,6 +11,10 @@ SET cash = cash + ?,
     total_assets = total_assets + ?
 WHERE user_id = ?;
 `;
+const updateUserType = `UPDATE User
+SET type = ?
+WHERE user_id = ?;
+`;
 
 // user의 level에 따라 total_assets, cash 업데이트
 
@@ -21,4 +25,5 @@ module.exports = {
   findUserByEmailQuery,
   findUserByUserIDQuery,
   updateUserCashAndTotalAssets,
+  updateUserType,
 };
