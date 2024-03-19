@@ -64,7 +64,7 @@ router.post("/login", async (req, res) => {
     });
 
     const userData = {
-      id: user.id,
+      user_id: user.user_id,
       nickname: user.nickname,
       profile_img: user.profile_img,
       cash: user.cash,
@@ -101,6 +101,73 @@ router.all("/logout", authenticate, async (req, res, next) => {
 
     res.status(204).json({
       message: "logout 완료",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    next(err);
+  }
+});
+
+router.put("/quiz", authenticate, async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, level } = req.body;
+
+    let value;
+    console.log(level);
+
+    // 레벨에 따른 지급할 캐시 설정 로직
+    switch (level) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+        value = 1000;
+        break;
+      case 4:
+        value = 5000;
+        break;
+      case 5:
+        value = 10000;
+        break;
+      case 6:
+      case 7:
+      case 8:
+        value = 50000;
+        break;
+      default:
+        value = 0; // level이 0~8 범위 밖일 경우 처리
+    }
+
+    const user = [value, value, user_id];
+    console.log(user);
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(
+        userQueries.updateUserCashAndTotalAssets,
+        user,
+        (err, results) => {
+          // 5. pool 연결 반납
+          conn.release();
+
+          if (err) {
+            console.error("MySQL DB 데이터 업데이트 에러:", err);
+            res.status(500).send("서버 에러");
+            return;
+          }
+
+          console.log("캐시 업데이트 성공");
+          res.send("캐시 업데이트 성공");
+        }
+      );
     });
   } catch (err) {
     console.error(err);
