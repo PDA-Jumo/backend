@@ -5,6 +5,7 @@ const makeUserQuery =
   "INSERT INTO User (nickname,email,password,profile_img) values (?,?,?,?)";
 const checkUserQuery = `SELECT * From user`;
 const findUserByEmailQuery = `SELECT * FROM User WHERE email = ?`;
+const findUserByUserIDQuery = `SELECT * FROM User WHERE user_id = ?`;
 const updateUserCashAndTotalAssets = `UPDATE User
 SET cash = cash + ?,
     total_assets = total_assets + ?
@@ -18,5 +19,6 @@ module.exports = {
   makeUserQuery,
   checkUserQuery,
   findUserByEmailQuery,
+  findUserByUserIDQuery,
   updateUserCashAndTotalAssets,
 };
