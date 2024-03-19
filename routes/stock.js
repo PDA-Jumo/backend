@@ -1,33 +1,35 @@
-var express = require("express")
+var express = require("express");
 var router = express.Router();
 var axios = require("axios");
 var cheerio = require("cheerio");
 
-const searchstockQueries = require("../models/queries/stock/searchstockQueries")
-const pool = require("../models/dbConnect")
+const searchstockQueries = require("../models/queries/stock/searchstockQueries");
+const pool = require("../models/dbConnect");
+const { get10StockThemes } = require("../utils/stock/stockService");
 
 //종목 검색
-router.get("/search", function(req, res, next){
-    pool.getConnection((err,conn)=>{
-        if(err){
-            console.error("DB Disconnected:",err);
-            return;
+router.get("/search", function (req, res, next) {
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+
+    conn.query(
+      searchstockQueries.searchstockQueries,
+      [req.query.stock_name],
+      (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
         }
-
-        conn.query(searchstockQueries.searchstockQueries, [req.query.stock_name], (err,results)=>{
-            conn.release();
-            
-            if(err){
-                console.log("Query Error:",err)
-                return
-            }
-            res.json(results)
-        })
-
-    })
-  
-})
-
+        res.json(results);
+      }
+    );
+  });
+});
 
 // 마켓 이슈 GET
 router.get("/issue", async (req, res, next) => {
@@ -111,7 +113,18 @@ router.get("/liveSise", async (req, res, next) => {
   }
 });
 
- 
+// 지금 주목받는 테마
+router.get("/theme", async (req, res, next) => {
+  try {
+    const response = await get10StockThemes(
+      req.query.ordering ? req.query.ordering : "desc"
+    );
+    res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
 
-module.exports = router
-
+module.exports = router;
