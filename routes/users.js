@@ -216,6 +216,44 @@ router.put("/test", authenticate, async (req, res, next) => {
   }
 });
 
+router.put("/work", authenticate, async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, cash } = req.body;
+
+    const user = [cash, cash, user_id];
+    console.log(user);
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(userQueries.updateUserCashByWork, user, (err, results) => {
+        // 5. pool 연결 반납
+        conn.release();
+
+        if (err) {
+          console.error("MySQL DB 데이터 업데이트 에러:", err);
+          res.status(500).send("서버 에러");
+          return;
+        }
+
+        console.log("노동으로 Cash 업데이트 성공");
+        res.send("성공");
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
 // router.get("/home", authenticate, async (req, res, next) => {
 //   try {
 //     // 1. 사용자에게 email, password 받음

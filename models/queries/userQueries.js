@@ -15,6 +15,11 @@ const updateUserType = `UPDATE User
 SET type = ?
 WHERE user_id = ?;
 `;
+const updateUserCashByWork = `UPDATE User
+SET cash = cash + ?,
+total_assets = total_assets + ?
+WHERE user_id = ?;
+`;
 
 // user의 level에 따라 total_assets, cash 업데이트
 
@@ -26,4 +31,5 @@ module.exports = {
   findUserByUserIDQuery,
   updateUserCashAndTotalAssets,
   updateUserType,
+  updateUserCashByWork,
 };
