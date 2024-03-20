@@ -6,6 +6,7 @@ const io = new Server({
   },
 });
 
-require("./socketEvents")(io);
+require("./CommunitySocketEvents")(io);
+require("./StockSocketEvents")(io);
 
 module.exports = io;
