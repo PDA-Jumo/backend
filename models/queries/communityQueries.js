@@ -29,8 +29,8 @@ WHERE stock_code = ? AND user_id = ?`;
 
 const getAllChatsByChatid = `SELECT chat_id, user_id, stock_code, content, created_at FROM Chat WHERE chat_id = ?`;
 
-const insertChat = `INSERT INTO Chat (user_id, stock_code, stock_name, content) 
-VALUES (?,?,?,?);
+const insertChat = `INSERT INTO Chat (user_id, stock_code, stock_name, content, created_at) 
+VALUES (?,?,?,?,?);
 `;
 
 module.exports = {
