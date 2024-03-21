@@ -1,8 +1,10 @@
 var express = require("express")
 var router = express.Router();
 const PortfolioQueries = require("../models/queries/Portfolio/PortfolioQueries")
+const LikeStockQueries = require("../models/queries/Portfolio/LikeStock")
 const pool = require("../models/dbConnect")
 const axios = require('axios');
+require("dotenv").config();
 
 //주식 현재가 가져오기
 async function getCurrentPrice(code) {
@@ -10,7 +12,9 @@ async function getCurrentPrice(code) {
   const headers = {
     "Content-Type": "application/json; charset=utf-8",
     "tr_id": "FHKST01010100",
-    
+    "Authorization" : process.env.AUTHORIZATION,
+    "appKey": process.env.APPKEY,
+    "appSecret": process.env.APPSECRET,
     
     
   };
@@ -96,6 +100,30 @@ router.get("/", function(req, res, next){
     })
   
 })
+
+
+
+//관심종목
+router.get("/like", function(req, res, next){
+    pool.getConnection((err,conn)=>{
+        if(err){
+            console.error("DB Disconnected:",err);
+            return;
+        }
+  
+        conn.query(LikeStockQueries.LikeStockQueries, [req.query.user_id], (err,results)=>{
+            conn.release();
+            
+            if(err){
+                console.log("Query Error:",err)
+                return
+            }
+            res.json(results)
+        })
+  
+    })
+  
+  })
 
  
 

@@ -1,34 +1,57 @@
-var express = require("express");
+var express = require("express")
 var router = express.Router();
 var axios = require("axios");
 var cheerio = require("cheerio");
-
-const searchstockQueries = require("../models/queries/stock/searchstockQueries");
-const pool = require("../models/dbConnect");
+const searchstockQueries = require("../models/queries/stock/searchstockQueries")
+const pool = require("../models/dbConnect")
 const { get10StockThemes } = require("../utils/stock/stockService");
+const crawlnews = require("../models/crawlnews")
 
 //종목 검색
-router.get("/search", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-
-    conn.query(
-      searchstockQueries.searchstockQueries,
-      [req.query.stock_name],
-      (err, results) => {
-        conn.release();
-
-        if (err) {
-          console.log("Query Error:", err);
-          return;
+router.get("/search", function(req, res, next){
+    pool.getConnection((err,conn)=>{
+        if(err){
+            console.error("DB Disconnected:",err);
+            return;
         }
-        res.json(results);
+
+        let stockName = '%' + req.query.stock_name + '%';
+
+        conn.query(searchstockQueries.searchstockQueries, [stockName], (err,results)=>{
+            conn.release();
+            
+            if(err){
+                console.log("Query Error:",err)
+                return
+            }
+            res.json(results)
+        })
+
+    })
+  
+})
+
+
+// 마켓 이슈 GET
+router.get("/issue", async (req, res, next) => {
+  try {
+    const apiKey = req.headers.apikey;
+
+    const responseFromShinhan = await axios.get(
+      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/strategy/market-issue",
+      {
+        headers: {
+          apiKey: apiKey,
+        },
       }
     );
-  });
+    const issueData = responseFromShinhan.data.dataBody.list;
+
+    res.json(issueData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 // 마켓 이슈 GET
@@ -127,4 +150,60 @@ router.get("/theme", async (req, res, next) => {
   }
 });
 
-module.exports = router;
+// 주식 상세 정보 가져오기
+async function getStockDetail(code) {
+  const url = "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price";
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "tr_id": "FHKST01010100",
+    "Authorization" : process.env.AUTHORIZATION,
+    "appKey": process.env.APPKEY,
+    "appSecret": process.env.APPSECRET,
+    
+    
+  };
+  const params = {
+    "fid_cond_mrkt_div_code": "J",
+    "fid_input_iscd": code
+  };
+
+  try {
+    const response = await axios.get(url, { headers: headers, params: params });
+    return {
+      prpr:response.data.output.stck_prpr, //현재시세
+      per: response.data.output.per, //per
+      pbr: response.data.output.pbr, //pbr
+      hts_avls: response.data.output.hts_avls, //시가총액
+      hts_frgn_ehrt: response.data.output.hts_frgn_ehrt  //외국인 소진율
+    };
+    
+  } catch (error) {
+    console.error("Error:", error);
+  }
+}
+
+router.get("/detail/:code/:name", async (req, res, next) => {
+ const code = req.params.code;
+ try {
+  const stockDetail = await getStockDetail(code); 
+  res.json(stockDetail); 
+} catch (error) {
+  console.error("Error:", error);
+}
+});
+
+router.get("/news/:code", async(req,res,next)=>{
+  const code = req.params.code;
+  try {
+    const stockNews = await crawlnews(code); 
+    res.json(stockNews); 
+    console.log(stockNews)
+  } catch (error) {
+    console.error("Error:", error);
+  }
+})
+
+ 
+
+module.exports = router
+
