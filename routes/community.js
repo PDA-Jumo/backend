@@ -20,8 +20,8 @@ router.get("/", function (req, res, next) {
 
       if (error) throw error;
 
-      //   console.log("ALL CommunityList : ", rows);
       res.json(rows);
+      console.log("커뮤니티 리스트를 불러옵니다");
     });
   });
 });
@@ -41,8 +41,8 @@ router.get("/hot", function (req, res, next) {
 
       if (error) throw error;
 
-      //   console.log("ALL CommunityList : ", rows);
       res.json(rows);
+      console.log("현재 핫한 종목 커뮤니티 리스트를 불러옵니다");
     });
   });
 });
@@ -100,11 +100,10 @@ router.get("/:stock_code", function (req, res, next) {
   });
 });
 
-router.post("/:stock_code", function (req, res, next) {
+router.post("/create/:stock_code", function (req, res, next) {
   const stock_code = req.params.stock_code;
-  const user_id = parseInt(req.body.user_id);
-  const stock_name = req.body.stock_name;
-  const content = req.body.content;
+  const { user_id, stock_name, content, created_at } = req.body;
+  console.log(user_id, stock_name, content);
 
   pool.getConnection((err, conn) => {
     if (err) {
@@ -115,18 +114,73 @@ router.post("/:stock_code", function (req, res, next) {
     // 2. 쿼리 실행
     conn.query(
       communityQueries.insertChat,
-      [user_id, stock_code, stock_name, content],
+      [user_id, stock_code, stock_name, content, created_at],
       (error, rows) => {
         // 3. pool 연결 반납
         conn.release();
 
         if (error) throw error;
 
+        // console.log("All Chats By Stock Code : ", rows);
         res.json(rows);
       }
     );
   });
 });
+
+// router.get("/:stock_code", function (req, res, next) {
+//   const stock_code = req.params.stock_code;
+
+//   pool.getConnection((err, conn) => {
+//     if (err) {
+//       console.error("DB Disconnected:", err);
+//       return;
+//     }
+
+//     // 2. 쿼리 실행
+//     conn.query(
+//       communityQueries.getAllChatsByStockcode,
+//       [stock_code],
+//       (error, rows) => {
+//         // 3. pool 연결 반납
+//         conn.release();
+
+//         if (error) throw error;
+
+//         // console.log("All Chats By Stock Code : ", rows);
+//         res.json(rows);
+//       }
+//     );
+//   });
+// });
+
+// router.post("/:stock_code", function (req, res, next) {
+//   const stock_code = req.params.stock_code;
+//   const user_id = parseInt(req.body.user_id);
+//   const stock_name = req.body.stock_name;
+//   const content = req.body.content;
+
+//   pool.getConnection((err, conn) => {
+//     if (err) {
+//       console.error("DB Disconnected:", err);
+//       return;
+//     }
+
+//     // 2. 쿼리 실행
+//     conn.query(
+//       communityQueries.insertChat,
+//       [user_id, stock_code, stock_name, content],
+//       (error, rows) => {
+//         // 3. pool 연결 반납
+//         conn.release();
+
+//         if (error) throw error;
+
+//         res.json(rows);
+//       }
+//     );
+//   });
+// });
 
 router.get("/:stock_code/user/:user_id", function (req, res, next) {
   const stock_code = req.params.stock_code;
