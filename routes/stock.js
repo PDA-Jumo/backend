@@ -8,28 +8,28 @@ const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 
 //종목 검색
-router.get("/search", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-
-    conn.query(
-      searchstockQueries.searchstockQueries,
-      [req.query.stock_name],
-      (err, results) => {
-        conn.release();
-
-        if (err) {
-          console.log("Query Error:", err);
+router.get("/search", function(req, res, next){
+  pool.getConnection((err,conn)=>{
+      if(err){
+          console.error("DB Disconnected:",err);
           return;
-        }
-        res.json(results);
       }
-    );
-  });
-});
+
+      let stockName = '%' + req.query.stock_name + '%';
+
+      conn.query(searchstockQueries.searchstockQueries, [stockName], (err,results)=>{
+          conn.release();
+          
+          if(err){
+              console.log("Query Error:",err)
+              return
+          }
+          res.json(results)
+      })
+
+  })
+
+})
 
 // 마켓 이슈 GET
 router.get("/issue", async (req, res, next) => {
