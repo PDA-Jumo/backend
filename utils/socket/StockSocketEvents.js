@@ -28,6 +28,7 @@ module.exports = function (io) {
     });
 
     socket.on("disconnect", () => {
+      console.log("연결이 해제됐어요^^ : ", socket.id);
       console.log("user disconnected");
     });
   });

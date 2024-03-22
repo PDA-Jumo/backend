@@ -3,6 +3,8 @@ var router = express.Router();
 
 const testQueries = require("../models/queries/testQueries");
 const communityQueries = require("../models/queries/communityQueries");
+const getroomList = require("../models/queries/communityQueries");
+
 const pool = require("../models/dbConnect");
 
 router.get("/", function (req, res, next) {
@@ -74,6 +76,30 @@ router.get("/:stock_code/:limit", function (req, res, next) {
   });
 });
 
+//방 검색
+router.get("/search", function (req, res, next) {
+  console.log("개피곤");
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+
+    let stockName = "%" + req.query.stock_name + "%";
+
+    conn.query(getroomList.getroomList, [stockName], (err, results) => {
+      conn.release();
+
+      if (err) {
+        console.log("Query Error:", err);
+        return;
+      }
+      console.log(stockName);
+      res.json(results);
+    });
+  });
+});
+
 router.get("/:stock_code", function (req, res, next) {
   const stock_code = req.params.stock_code;
 
@@ -119,7 +145,7 @@ router.post("/create/:stock_code", function (req, res, next) {
         // 3. pool 연결 반납
         conn.release();
 
-        if (error) throw error;
+        //         if (error) throw error;
 
         // console.log("All Chats By Stock Code : ", rows);
         res.json(rows);

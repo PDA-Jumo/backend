@@ -25,6 +25,9 @@ async function crawlnews(code) {
             title = title.substring(0, relatedIndex).trim();
         
         }
+
+        url = `https://finance.naver.com${url}`;
+
         return {
             title,
             url

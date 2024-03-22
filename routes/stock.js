@@ -55,29 +55,7 @@ router.get("/issue", async (req, res, next) => {
   }
 });
 
-// 마켓 이슈 GET
-router.get("/issue", async (req, res, next) => {
-  try {
-    const apiKey = req.headers.apikey;
-
-    const responseFromShinhan = await axios.get(
-      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/strategy/market-issue",
-      {
-        headers: {
-          apiKey: apiKey,
-        },
-      }
-    );
-    const issueData = responseFromShinhan.data.dataBody.list;
-
-    res.json(issueData);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// 코스피 코스닥 지수, (개인/외국인/기관) 정보
+// 코스피 코스닥 지수, (개인/외국인/기관) 정보 GET
 router.get("/liveSise", async (req, res, next) => {
   try {
     const crawlingLiveSise = async () => {
@@ -144,6 +122,27 @@ router.get("/theme", async (req, res, next) => {
       req.query.ordering ? req.query.ordering : "desc"
     );
     res.json(response);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+// 실시간 종목 순위 GET
+router.get("/liveRanking", async (req, res, next) => {
+  try {
+    const type = req.body.type;
+    const apiKey = req.headers.apikey;
+    const response = await axios.get(
+      `https://gapi.shinhaninvest.com:8443/openapi/v1.0/ranking/issue?query_type=${type}`,
+      {
+        headers: {
+          apiKey: apiKey,
+        },
+      }
+    );
+    res.json(response.data.dataBody);
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "fail" });
