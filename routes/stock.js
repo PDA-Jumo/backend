@@ -28,15 +28,6 @@ router.get("/search", function (req, res, next) {
           return;
       }
 
-      let stockName = '%' + req.query.stock_name + '%';
-
-      conn.query(searchstockQueries.searchstockQueries, [stockName], (err,results)=>{
-          conn.release();
-          
-          if(err){
-              console.log("Query Error:",err)
-              return
-          }
           res.json(results)
       })
 
