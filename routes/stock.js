@@ -116,10 +116,23 @@ router.get("/liveSise", async (req, res, next) => {
 });
 
 // 지금 주목받는 테마
+// router.get("/theme", async (req, res, next) => {
+//   try {
+//     const response = await get10StockThemes(
+//       req.query.ordering ? req.query.ordering : "desc"
+//     );
+//     res.json(response);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(400).json({ message: "fail" });
+//     next(err);
+//   }
+// });
+
 router.get("/theme", async (req, res, next) => {
   try {
-    const response = await get10StockThemes(
-      req.query.ordering ? req.query.ordering : "desc"
+    const response = await axios.get(
+      "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
     res.json(response);
   } catch (err) {
@@ -130,9 +143,9 @@ router.get("/theme", async (req, res, next) => {
 });
 
 // 실시간 종목 순위 GET
-router.get("/liveRanking", async (req, res, next) => {
+router.get("/liveRanking/:type", async (req, res, next) => {
   try {
-    const type = req.body.type;
+    const type = req.params.type;
     const apiKey = req.headers.apikey;
     const response = await axios.get(
       `https://gapi.shinhaninvest.com:8443/openapi/v1.0/ranking/issue?query_type=${type}`,
