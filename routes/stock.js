@@ -134,8 +134,9 @@ router.get("/theme", async (req, res, next) => {
     const response = await axios.get(
       "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
-    res.json(response);
+    res.json(response.data);
   } catch (err) {
+    console.log("error", err);
     console.error(err);
     res.status(400).json({ message: "fail" });
     next(err);
