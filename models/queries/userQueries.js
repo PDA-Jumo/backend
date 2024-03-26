@@ -4,6 +4,7 @@ const checkEmailQuery = `SELECT email FROM user`;
 const makeUserQuery =
   "INSERT INTO User (nickname,email,password,profile_img) values (?,?,?,?)";
 const checkUserQuery = `SELECT * From user`;
+const rankUserQuery = `SELECT * FROM User ORDER BY total_assets DESC`; // 쿼리 정의
 const findUserByEmailQuery = `SELECT * FROM User WHERE email = ?`;
 const findUserByUserIDQuery = `SELECT * FROM User WHERE user_id = ?`;
 const updateUserCashAndTotalAssets = `UPDATE User
@@ -27,6 +28,7 @@ module.exports = {
   checkEmailQuery,
   makeUserQuery,
   checkUserQuery,
+  rankUserQuery,
   findUserByEmailQuery,
   findUserByUserIDQuery,
   updateUserCashAndTotalAssets,

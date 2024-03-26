@@ -71,6 +71,7 @@ router.post("/login", async (req, res) => {
       total_assets: user.total_assets,
       level: user.level,
       type: user.type,
+      level_name: user.level_name,
     };
     res.status(201).json(userData);
   } catch (err) {
@@ -250,6 +251,36 @@ router.put("/work", authenticate, async (req, res, next) => {
     console.error(err);
     res.status(400);
     res.send("실패");
+    next(err);
+  }
+});
+
+router.get("/rankUsers", async (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        res.status(500).send("데이터베이스 연결 실패");
+        return;
+      }
+
+      conn.query(userQueries.rankUserQuery, (err, results) => {
+        // 연결 반납
+        conn.release();
+
+        if (err) {
+          console.error("MySQL DB 쿼리 실행 에러:", err);
+          res.status(500).send("서버 에러");
+          return;
+        }
+
+        console.log("유저들의 정보를 total_assets 순으로 내림차순 정렬 성공");
+        res.json(results);
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400).send("실패");
     next(err);
   }
 });
