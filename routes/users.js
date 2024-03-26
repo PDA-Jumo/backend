@@ -284,7 +284,7 @@ router.get("/rankUsers", async (req, res, next) => {
   }
 });
 
-router.get("/updateUsers", async (req, res, next) => {
+router.get("/updateUsers/:user_id", async (req, res, next) => {
   try {
     pool.getConnection((err, conn) => {
       if (err) {
@@ -293,7 +293,10 @@ router.get("/updateUsers", async (req, res, next) => {
         return;
       }
 
-      conn.query(userQueries.findUserByUserIDQuery, (err, results) => {
+      const user = [req.params.user_id];
+      console.log(user);
+
+      conn.query(userQueries.findUserByUserIDQuery, user, (err, results) => {
         conn.release();
 
         if (err) {
