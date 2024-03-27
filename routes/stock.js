@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 var axios = require("axios");
 var cheerio = require("cheerio");
+require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
@@ -201,6 +202,23 @@ router.get("/news/:code", async (req, res, next) => {
   } catch (error) {
     console.error("Error:", error);
   }
+});
+
+router.get("/hoka/:code/:name", async (req, res, next) => {
+  const code = req.params.code;
+  // 주식 코드를 구독합니다.
+  subscriber.subscribe(code);
+
+  subscriber.on('message', (channel, message) => {
+    if(channel === code) {
+      try {
+        const stockDetail = JSON.parse(message);
+        res.json(stockDetail);
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+  });
 });
 
 module.exports = router;
