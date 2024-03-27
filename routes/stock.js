@@ -2,7 +2,9 @@ var express = require("express");
 var router = express.Router();
 var axios = require("axios");
 var cheerio = require("cheerio");
+require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
+const buySellQueries = require("../models/queries/stock/buySellQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -150,6 +152,82 @@ router.get("/liveRanking", async (req, res, next) => {
   }
 });
 
+router.post("/buy", async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, stock_code, quantity, transaction_price } = req.body;
+
+    const buyData = [user_id, stock_code, quantity, transaction_price, "매수"];
+    console.log(buyData);
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(buySellQueries.buySellQueries, buyData, (err, results) => {
+        // 5. pool 연결 반납
+        conn.release();
+
+        if (err) {
+          console.error("MySQL DB 데이터 업데이트 에러:", err);
+          res.status(500).send("서버 에러");
+          return;
+        }
+
+        console.log("매수 주문 성공");
+        res.send("성공");
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
+router.post("/sell", async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, stock_code, quantity, transaction_price } = req.body;
+
+    const sellData = [user_id, stock_code, quantity, transaction_price, "매도"];
+    console.log(sellData);
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(buySellQueries.buySellQueries, sellData, (err, results) => {
+        // 5. pool 연결 반납
+        conn.release();
+
+        if (err) {
+          console.error("MySQL DB 데이터 업데이트 에러:", err);
+          res.status(500).send("서버 에러");
+          return;
+        }
+
+        console.log("매도 주문 성공");
+        res.send("성공");
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
 // 주식 상세 정보 가져오기
 async function getStockDetail(code) {
   const url =
@@ -199,6 +277,23 @@ router.get("/news/:code", async (req, res, next) => {
   } catch (error) {
     console.error("Error:", error);
   }
+});
+
+router.get("/hoka/:code/:name", async (req, res, next) => {
+  const code = req.params.code;
+  // 주식 코드를 구독합니다.
+  subscriber.subscribe(code);
+
+  subscriber.on("message", (channel, message) => {
+    if (channel === code) {
+      try {
+        const stockDetail = JSON.parse(message);
+        res.json(stockDetail);
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+  });
 });
 
 module.exports = router;
