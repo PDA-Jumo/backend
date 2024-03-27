@@ -71,6 +71,7 @@ router.post("/login", async (req, res) => {
       total_assets: user.total_assets,
       level: user.level,
       type: user.type,
+      level_name: user.level_name,
     };
     res.status(201).json(userData);
   } catch (err) {
