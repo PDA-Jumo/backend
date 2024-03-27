@@ -1,34 +1,52 @@
 require("dotenv").config();
-const { connect, disconnect, socketEmitter } = require("./koreainvest"); // connect.js 파일에서 export한 함수와 객체를 import
+const redisConnect = require("../../models/redis/redisConnect");
+const subscriber = redisConnect.duplicate();
+
+// redis에서 key 조회
+let channels = [];
+(async () => {
+  try {
+    await subscriber.connect();
+    const keys = await subscriber.keys("*");
+    channels = keys;
+    console.log("CHANNELS : ", channels, channels.length); // 결과 확인
+  } catch (err) {
+    console.error("Redis 작업 중 오류 발생:", err);
+  }
+})();
+
+// 각 방마다 subscribe 하도록
+channels.map((channel) => {
+  subscriber.subscribe(channel);
+
+  subscriber.on("message", (channel, message) => {
+    console.log(`Message from channel ${channel}: ${message}`);
+    const data = JSON.parse(message);
+    console.log(`[${channel}] Stock data updated:`, data);
+  });
+
+  subscriber.subscribe(channel, (msg) => {
+    console.log(msg, "is subscribed data");
+  });
+});
+
 module.exports = function (io) {
   io.on("connection", async (socket) => {
     console.log("a user connected", socket.id);
 
     socket.on("joinRoom", ({ stock_code, user_id }) => {
+      // user room에 입장
       socket.join(stock_code);
-      connect(stock_code); // 한국투자증권 웹소켓 연결
 
-      // 방마다 이벤트 리스너 등록
-      const onStockData = (data) => {
-        io.to(stock_code).emit("currentStockData", data);
-      };
-      socketEmitter.on("currentStockData", onStockData);
-
-      console.log(
-        `${socket.id} : ${user_id}유저가 ${stock_code} 방에 입장했습니다.`
-      );
-
-      // 방을 나갈 때 이벤트 리스너 제거
-      socket.on("leaveRoom", ({ stock_code, user_id }) => {
-        socketEmitter.off("currentStockData", onStockData); // 해당 방의 리스너만 제거
-        // disconnect();
-        socket.leave(stock_code);
-        console.log(`${user_id}님이 ${stock_code}방에서 퇴장하셨습니다.`);
+      subscriber.subscribe(stock_code, (data) => {
+        console.log(`message from ${stock_code} : ${data}`);
       });
     });
 
+    socket.on("leaveRoom", ({ stock_code, user_id }) => {});
+
     socket.on("disconnect", () => {
-      console.log("연결이 해제됐어요^^ : ", socket.id);
+      console.log("연결이 해제됐습니다.", socket.id);
       console.log("user disconnected");
     });
   });

@@ -2,6 +2,7 @@ const redisClient = require("./redisConnect");
 const subscriber = redisClient.duplicate();
 
 subscriber.connect();
+
 async function setupSubscriptions() {
   try {
     const stockCode = "005930"; // 예시로 삼성전자 주식 코드를 사용합니다.
