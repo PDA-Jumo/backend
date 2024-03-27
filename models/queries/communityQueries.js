@@ -14,7 +14,7 @@ LIMIT 5; `;
 
 const getAllChatsByStockcodeLIMIT = `SELECT chat_id, user_id, stock_code, content, created_at 
 FROM Chat 
-WHERE stock_code = ?
+WHERE stock_code = ? AND user_id != 0
 ORDER BY created_at DESC
 LIMIT ?`;
 

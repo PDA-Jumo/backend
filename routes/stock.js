@@ -27,14 +27,12 @@ router.get("/search", function (req, res, next) {
         if (err) {
           console.log("Query Error:", err);
           return;
+        }
+        res.json(results);
       }
-
-          res.json(results)
-      })
-
-  })
-
-})
+    );
+  });
+});
 
 // 마켓 이슈 GET
 router.get("/issue", async (req, res, next) => {
