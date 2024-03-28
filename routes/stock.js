@@ -10,6 +10,7 @@ const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
 const financedata = require("../models/finance")
 
+
 //종목 검색
 router.get("/search", function (req, res, next) {
   pool.getConnection((err, conn) => {
@@ -289,16 +290,7 @@ router.get("/graph/:code", async (req, res, next) => {
   } catch (error) {
     console.error("Error:", error);
   }
-  subscriber.on("message", (channel, message) => {
-    if (channel === code) {
-      try {
-        const stockDetail = JSON.parse(message);
-        res.json(stockDetail);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    }
-  });
+
 });
 
 
