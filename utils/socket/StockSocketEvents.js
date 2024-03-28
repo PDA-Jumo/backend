@@ -10,12 +10,20 @@ module.exports = function (io) {
       const channels = await subscriber.keys("*");
       console.log("CHANNELS : ", channels, channels.length);
 
-      // 각 방마다 subscribe
+      // 각 방마다 subscribe 하도록
       channels.forEach((channel) => {
         subscriber.subscribe(channel, (data) => {
-          io.to(channel).emit("stock_update", data);
+          io.to(channel).emit("stock_update", JSON.parse(data));
         });
       });
+
+      // subscriber.on("message", (channel, message) => {
+      //   console.log(`Message from channel ${channel}: ${message}`);
+      //   const data = JSON.parse(message);
+
+      //   console.log(`[${channel}] Stock data updated:`, data);
+      //   io.to(channel).emit("stock_update", data);
+      // });
     } catch (err) {
       console.error("Redis 작업 중 오류 발생:", err);
     }
@@ -23,6 +31,7 @@ module.exports = function (io) {
 
   io.on("connection", (socket) => {
     console.log("a user connected", socket.id);
+
     socket.on("joinRoom", ({ stock_code, user_id }) => {
       // user room에 입장
       socket.join(stock_code);
