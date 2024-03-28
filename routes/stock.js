@@ -8,6 +8,8 @@ const buySellQueries = require("../models/queries/stock/buySellQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
+const financedata = require("../models/finance")
+
 
 //종목 검색
 router.get("/search", function (req, res, next) {
@@ -355,21 +357,18 @@ router.get("/news/:code", async (req, res, next) => {
   }
 });
 
-router.get("/hoka/:code/:name", async (req, res, next) => {
+router.get("/graph/:code", async (req, res, next) => {
   const code = req.params.code;
-  // 주식 코드를 구독합니다.
-  subscriber.subscribe(code);
+  try {
+    const stockgraph = await financedata(code);
+    res.json(stockgraph);
 
-  subscriber.on("message", (channel, message) => {
-    if (channel === code) {
-      try {
-        const stockDetail = JSON.parse(message);
-        res.json(stockDetail);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    }
-  });
+  } catch (error) {
+    console.error("Error:", error);
+  }
+
 });
+
+
 
 module.exports = router;
