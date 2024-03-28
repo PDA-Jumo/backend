@@ -34,6 +34,32 @@ router.get("/search", function (req, res, next) {
   });
 });
 
+router.get("/kospiRanking", async (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(
+        searchstockQueries.searchRandomKospiQueries,
+        (err, results) => {
+          conn.release();
+
+          if (err) {
+            console.log("Query Error:", err);
+            return;
+          }
+          res.json(results);
+        }
+      );
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
+});
+
 // 마켓 이슈 GET
 router.get("/issue", async (req, res, next) => {
   try {
