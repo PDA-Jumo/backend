@@ -194,34 +194,60 @@ router.get("/liveRanking/:type", async (req, res, next) => {
   }
 });
 
+//// NOTE: 매수, 매도 관련 API
+// 1. 매수 주문
 router.post("/buy", async (req, res, next) => {
   try {
     // 1. 사용자에게 email, password 받음
     const { user_id, stock_code, quantity, transaction_price } = req.body;
+    const total_price = quantity * transaction_price;
 
-    const buyData = [user_id, stock_code, quantity, transaction_price, "매수"];
-    console.log(buyData);
-
-    // 3. pool 연결 후 쿼리 실행
+    // 2. pool 연결 후 쿼리 실행
     pool.getConnection((err, conn) => {
       if (err) {
         console.error("MySQL 연결 에러:", err);
-        return;
+        return res.status(500).send("서버 에러");
       }
 
-      // 4. MySQL에 데이터 삽입
-      conn.query(buySellQueries.buySellQueries, buyData, (err, results) => {
-        // 5. pool 연결 반납
-        conn.release();
-
-        if (err) {
-          console.error("MySQL DB 데이터 업데이트 에러:", err);
-          res.status(500).send("서버 에러");
-          return;
+      // 3. 사용자의 현금 잔액을 확인
+      conn.query(buySellQueries.getUserCash, [user_id], (err, results) => {
+        // 4. 사용자의 현금이 주문 총 가격보다 크면
+        if (results[0].cash >= total_price) {
+          // 5. 매수 요청 배열 생성
+          const buyData = [
+            user_id,
+            stock_code,
+            quantity,
+            transaction_price,
+            "매수",
+          ];
+          // 6. MySQL에 데이터 삽입
+          conn.query(buySellQueries.buySellQueries, buyData, (err, results) => {
+            console.log("검사", results);
+            if (results.affectedRows > 0) {
+              // 7. 주문 성공 후 사용자의 현금 잔액 업데이트
+              conn.query(
+                buySellQueries.updateUserCash,
+                [total_price, user_id],
+                (err, results) => {
+                  // 8. pool 연결 반납
+                  conn.release();
+                  console.log(
+                    "매수 주문 성공 및 사용자 현금 잔액 업데이트 성공"
+                  );
+                  if (err) {
+                    console.log("Query Error:", err);
+                    return;
+                  }
+                  if (results.affectedRows > 0) {
+                    console.log("검사2", results);
+                    res.send("매수 주문, 사용자 현금 잔액 업데이트 성공");
+                  }
+                }
+              );
+            }
+          });
         }
-
-        console.log("매수 주문 성공");
-        res.send("성공");
       });
     });
   } catch (err) {
@@ -232,6 +258,7 @@ router.post("/buy", async (req, res, next) => {
   }
 });
 
+// 2. 매도 주문
 router.post("/sell", async (req, res, next) => {
   try {
     // 1. 사용자에게 email, password 받음
@@ -261,6 +288,55 @@ router.post("/sell", async (req, res, next) => {
         console.log("매도 주문 성공");
         res.send("성공");
       });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
+// 3. 매도 가능 수량 조회
+// NOTE: 매도 가능 수량은 '실제 가지고 있는 종목 갯수 - 매도 주문 가격 갯수`
+// '분할 매도'를 위함
+router.get("/sellquantity/:user_id/:stock_code", async (req, res, next) => {
+  try {
+    const quantityData = [req.params.user_id, req.params.stock_code];
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(
+        buySellQueries.getSellQuantity,
+        quantityData,
+        (err, results) => {
+          // 5. pool 연결 반납
+          conn.release();
+
+          if (err) {
+            console.error("MySQL DB 데이터 업데이트 에러:", err);
+            res.status(500).send("서버 에러");
+            return;
+          }
+          console.log(results);
+
+          // 결과가 없거나 매도 가능 수량이 없을 경우 0 반환
+          if (results[0].available_quantity === undefined) {
+            console.log("매도 수량 조회 성공 - 매도 가능 수량 없음");
+            res.json(0);
+          } else {
+            console.log("매도 수량 조회 성공");
+            console.log(results[0].available_quantity);
+            res.json(results[0].available_quantity);
+          }
+        }
+      );
     });
   } catch (err) {
     console.error(err);
