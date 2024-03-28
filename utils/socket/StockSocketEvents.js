@@ -23,7 +23,6 @@ module.exports = function (io) {
 
   io.on("connection", (socket) => {
     console.log("a user connected", socket.id);
-
     socket.on("joinRoom", ({ stock_code, user_id }) => {
       // user room에 입장
       socket.join(stock_code);
