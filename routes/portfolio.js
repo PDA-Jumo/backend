@@ -4,6 +4,7 @@ const PortfolioQueries = require("../models/queries/Portfolio/PortfolioQueries")
 const LikeStockQueries = require("../models/queries/Portfolio/LikeStock")
 const ClickLikeStock = require("../models/queries/Portfolio/LikeStock")
 const CheckLikeStock = require("../models/queries/Portfolio/LikeStock")
+const CancleLikeStock = require("../models/queries/Portfolio/LikeStock")
 const pool = require("../models/dbConnect")
 const axios = require('axios');
 require("dotenv").config();
@@ -138,6 +139,7 @@ router.get("/like", function(req, res, next){
   
 })
 
+//관심종목 등록
 router.post("/like", function(req,res){
     const {user_id, stock_code, stock_name} = req.body;
     pool.getConnection((err,conn)=>{
@@ -160,6 +162,32 @@ router.post("/like", function(req,res){
 
 })
 
+//관심종목 해지
+router.delete("/like", function(req,res){
+    const {user_id, stock_code} = req.body;
+    pool.getConnection((err,conn)=>{
+        if(err){
+            console.error("DB Disconnected:",err);
+            return;
+        }
+
+        conn.query(CancleLikeStock.CancleLikeStock,[user_id, stock_code],(err,results)=>{
+            conn.release();
+
+            if(err){
+                console.log("Query Error:",err)
+                return
+            }
+
+            res.status(200).json({ message: "Liked stock deleted successfully" });
+        })
+    })
+
+})
+
+
+
+//상세페이지에서 관심종목인지 확인
 router.get("/likecheck", function(req,res){
 
     pool.getConnection((err,conn)=>{
