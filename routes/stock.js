@@ -5,11 +5,11 @@ var cheerio = require("cheerio");
 require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const buySellQueries = require("../models/queries/stock/buySellQueries");
+const userQueries = require("../models/queries/userQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
-const financedata = require("../models/finance")
-
+const financedata = require("../models/finance");
 
 //종목 검색
 router.get("/search", function (req, res, next) {
@@ -35,6 +35,32 @@ router.get("/search", function (req, res, next) {
       }
     );
   });
+});
+
+router.get("/kospiRanking", async (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(
+        searchstockQueries.searchRandomKospiQueries,
+        (err, results) => {
+          conn.release();
+
+          if (err) {
+            console.log("Query Error:", err);
+            return;
+          }
+          res.json(results);
+        }
+      );
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
 });
 
 // 마켓 이슈 GET
@@ -120,13 +146,27 @@ router.get("/liveSise", async (req, res, next) => {
 });
 
 // 지금 주목받는 테마
+// router.get("/theme", async (req, res, next) => {
+//   try {
+//     const response = await get10StockThemes(
+//       req.query.ordering ? req.query.ordering : "desc"
+//     );
+//     res.json(response);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(400).json({ message: "fail" });
+//     next(err);
+//   }
+// });
+
 router.get("/theme", async (req, res, next) => {
   try {
-    const response = await get10StockThemes(
-      req.query.ordering ? req.query.ordering : "desc"
+    const response = await axios.get(
+      "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
-    res.json(response);
+    res.json(response.data);
   } catch (err) {
+    console.log("error", err);
     console.error(err);
     res.status(400).json({ message: "fail" });
     next(err);
@@ -134,9 +174,9 @@ router.get("/theme", async (req, res, next) => {
 });
 
 // 실시간 종목 순위 GET
-router.get("/liveRanking", async (req, res, next) => {
+router.get("/liveRanking/:type", async (req, res, next) => {
   try {
-    const type = req.body.type;
+    const type = req.params.type;
     const apiKey = req.headers.apikey;
     const response = await axios.get(
       `https://gapi.shinhaninvest.com:8443/openapi/v1.0/ranking/issue?query_type=${type}`,
@@ -286,13 +326,33 @@ router.get("/graph/:code", async (req, res, next) => {
   try {
     const stockgraph = await financedata(code);
     res.json(stockgraph);
-
   } catch (error) {
     console.error("Error:", error);
   }
-
 });
 
+router.get("/myStock/:user_id", async (req, res, next) => {
+  try {
+    const user = [req.params.user_id];
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
 
+      conn.query(userQueries.findMyStockByUserID, user, (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        res.json(results);
+      });
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
+});
 
 module.exports = router;

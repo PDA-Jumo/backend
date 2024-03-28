@@ -21,6 +21,9 @@ total_assets = total_assets + ?
 WHERE user_id = ?;
 `;
 
+const updateUserLevel = `UPDATE User SET level = level + 1, cash = cash + ?, total_assets = total_assets + ? WHERE user_id = ?;`;
+
+const findMyStockByUserID = `SELECT * FROM MyStock where user_id = 2;`;
 // user의 level에 따라 total_assets, cash 업데이트
 
 module.exports = {
@@ -32,4 +35,6 @@ module.exports = {
   updateUserCashAndTotalAssets,
   updateUserType,
   updateUserCashByWork,
+  updateUserLevel,
+  findMyStockByUserID,
 };
