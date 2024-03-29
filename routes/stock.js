@@ -173,7 +173,8 @@ router.get("/theme", async (req, res, next) => {
     next(err);
   }
 });
-
+const { promisify } = require("util");
+const getAsync = promisify(redisConnect.get).bind(redisConnect);
 // 실시간 종목 순위 GET
 router.get("/liveRanking/:type", async (req, res, next) => {
   try {
