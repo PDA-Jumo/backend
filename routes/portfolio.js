@@ -1,6 +1,7 @@
 var express = require("express")
 var router = express.Router();
 const PortfolioQueries = require("../models/queries/Portfolio/PortfolioQueries")
+const WorldPortfolioQueries = require("../models/queries/Portfolio/PortfolioQueries")
 const LikeStockQueries = require("../models/queries/Portfolio/LikeStock")
 const ClickLikeStock = require("../models/queries/Portfolio/LikeStock")
 const CheckLikeStock = require("../models/queries/Portfolio/LikeStock")
@@ -30,6 +31,7 @@ function calculateAssets(resultsWithCurrentPrice) {
     let yield_rate =0;
     let yield_money = 0;
     let myStock = [];
+    let myStockCode= [];
     let mystock_percent = [];
 
     resultsWithCurrentPrice.forEach(stock => {
@@ -41,6 +43,7 @@ function calculateAssets(resultsWithCurrentPrice) {
     resultsWithCurrentPrice.forEach(stock => {
         // myStock 배열에 stock_name 추가
         myStock.push(stock.stock_name);
+        myStockCode.push(stock.stock_code);
 
         // mystock_percent 계산
         let stock_assets = Math.round((parseInt(stock.current_price) * stock.quantity / assets) * 1000) / 10;
@@ -61,12 +64,13 @@ function calculateAssets(resultsWithCurrentPrice) {
         yield_rate: yield_rate,
         yield_money : yield_money,
         myStock: myStock,
-        mystock_percent: mystock_percent,
+        myStockCode : myStockCode,
+        mystock_percent: mystock_percent
     };
 }
 
 
-//포트폴리오 보유종목 들고오기
+//포트폴리오 국내 보유종목 들고오기
 router.get("/", function(req, res, next){
     pool.getConnection((err,conn)=>{
         if(err){
@@ -75,6 +79,47 @@ router.get("/", function(req, res, next){
         }
 
         conn.query(PortfolioQueries.PortfolioQueries, [req.query.user_id], async (err,results)=>{
+            conn.release();
+            
+            if(err){
+                console.log("Query Error:",err)
+                return
+            }
+            // res.json(results)
+
+            const promises = results.map(async (stock) => {
+        
+                const currentPrice = await getCurrentPrice(stock.stock_code);
+                console.log(currentPrice)
+                
+
+                return {
+                    ...stock,
+                    current_price: currentPrice,      //현재가격 추가
+                };
+            });
+
+            //data들고올때까지 기다료
+            const resultsWithCurrentPrice = await Promise.all(promises);
+
+            let result = calculateAssets(resultsWithCurrentPrice);
+            res.json(result);
+            
+        })
+
+    })
+  
+})
+
+//포트폴리오 해외 보유종목 들고오기
+router.get("/2", function(req, res, next){
+    pool.getConnection((err,conn)=>{
+        if(err){
+            console.error("DB Disconnected:",err);
+            return;
+        }
+
+        conn.query(WorldPortfolioQueries.WorldPortfolioQueries, [req.query.user_id], async (err,results)=>{
             conn.release();
             
             if(err){
