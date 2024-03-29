@@ -242,6 +242,51 @@ router.get("/news/:code", async (req, res, next) => {
   }
 });
 
+
+router.get("/kospitop5", function (req, res, next) {
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+    conn.query(
+      searchstockQueries.kospitop5Queries,
+      (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        res.json(results);
+      }
+    );
+  });
+});
+
+
+
+router.get("/kosdaqtop5", function (req, res, next) {
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+    conn.query(
+      searchstockQueries.kosdaqtop5Queries,
+      (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        res.json(results);
+      }
+    );
+  });
+});
+
 router.get("/myStock/:user_id", async (req, res, next) => {
   try {
     const user = [req.params.user_id];
@@ -265,5 +310,6 @@ router.get("/myStock/:user_id", async (req, res, next) => {
     console.error("Error", error);
   }
 });
+
 
 module.exports = router;

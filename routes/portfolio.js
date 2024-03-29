@@ -35,6 +35,7 @@ async function getCurrentPrice(code) {
 function calculateAssets(resultsWithCurrentPrice) {
     let assets = 0;
     let myStock = [];
+    let myStockCode= [];
     let mystock_percent = [];
 
     resultsWithCurrentPrice.forEach(stock => {
@@ -45,6 +46,7 @@ function calculateAssets(resultsWithCurrentPrice) {
     resultsWithCurrentPrice.forEach(stock => {
         // myStock 배열에 stock_name 추가
         myStock.push(stock.stock_name);
+        myStockCode.push(stock.stock_code);
 
         // mystock_percent 계산
         let stock_assets = Math.round((parseInt(stock.current_price) * stock.quantity / assets) * 1000) / 10;
@@ -57,6 +59,7 @@ function calculateAssets(resultsWithCurrentPrice) {
     return {
         assets: assets,
         myStock: myStock,
+        myStockCode : myStockCode,
         mystock_percent: mystock_percent
     };
 }
