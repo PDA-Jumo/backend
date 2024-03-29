@@ -3,6 +3,7 @@ var router = express.Router();
 var axios = require("axios");
 var cheerio = require("cheerio");
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
+const userQueries = require("../models/queries/userQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -31,6 +32,32 @@ router.get("/search", function (req, res, next) {
       }
     );
   });
+});
+
+router.get("/kospiRanking", async (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(
+        searchstockQueries.searchRandomKospiQueries,
+        (err, results) => {
+          conn.release();
+
+          if (err) {
+            console.log("Query Error:", err);
+            return;
+          }
+          res.json(results);
+        }
+      );
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
 });
 
 // 마켓 이슈 GET
@@ -212,6 +239,30 @@ router.get("/news/:code", async (req, res, next) => {
     console.log(stockNews);
   } catch (error) {
     console.error("Error:", error);
+  }
+});
+
+router.get("/myStock/:user_id", async (req, res, next) => {
+  try {
+    const user = [req.params.user_id];
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(userQueries.findMyStockByUserID, user, (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        res.json(results);
+      });
+    });
+  } catch (error) {
+    console.error("Error", error);
   }
 });
 
