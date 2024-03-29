@@ -10,6 +10,7 @@ const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
 const financedata = require("../models/finance");
+const redisConnect = require("../models/redis/redisConnect");
 
 //종목 검색
 router.get("/search", function (req, res, next) {
@@ -172,7 +173,8 @@ router.get("/theme", async (req, res, next) => {
     next(err);
   }
 });
-
+const { promisify } = require("util");
+const getAsync = promisify(redisConnect.get).bind(redisConnect);
 // 실시간 종목 순위 GET
 router.get("/liveRanking/:type", async (req, res, next) => {
   try {
@@ -186,7 +188,30 @@ router.get("/liveRanking/:type", async (req, res, next) => {
         },
       }
     );
-    res.json(response.data.dataBody);
+
+    const liveRankingData = await Promise.all(
+      response.data.dataBody.map(async (item) => {
+        try {
+          // Redis에서 현재 가격 정보 조회
+          const price = await redisConnect.get(item.stock_code);
+
+          console.log(price);
+          // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
+          item.current_price = price
+            ? JSON.parse(price).output2.stck_prpr
+            : "불러오는 중..";
+          return item;
+        } catch (err) {
+          console.error(err);
+          item.current_price = "가격 정보 불러오는 중..";
+          return item;
+        }
+      })
+    );
+
+    res.json(liveRankingData);
+
+    // res.json(response.data.dataBody);
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "fail" });
