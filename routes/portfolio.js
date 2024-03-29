@@ -5,33 +5,22 @@ const LikeStockQueries = require("../models/queries/Portfolio/LikeStock")
 const ClickLikeStock = require("../models/queries/Portfolio/LikeStock")
 const CheckLikeStock = require("../models/queries/Portfolio/LikeStock")
 const CancleLikeStock = require("../models/queries/Portfolio/LikeStock")
+const redisConnect = require("../models/redis/redisConnect");
 const pool = require("../models/dbConnect")
 const axios = require('axios');
 require("dotenv").config();
 
 //주식 현재가 가져오기
 async function getCurrentPrice(code) {
-  const url = "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price";
-  const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "tr_id": "FHKST01010100",
-    "Authorization" : process.env.AUTHORIZATION,
-    "appKey": process.env.APPKEY,
-    "appSecret": process.env.APPSECRET,
-    
-    
-  };
-  const params = {
-    "fid_cond_mrkt_div_code": "J",
-    "fid_input_iscd": code
-  };
-
-  try {
-    const response = await axios.get(url, { headers: headers, params: params });
-    return response.data.output.stck_prpr;
-  } catch (error) {
-    console.error("Error:", error);
-  }
+    try {
+        const redis_data = await redisConnect.get(code);
+        const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+        return stock_data.output2.stck_prpr
+      } catch (error) {
+        console.error(error)
+        res.status(400).json({ message: "fail" });
+        next(err);
+      }
 }
 
 // assets : 총자산, myStock: 내 보유 종목, mystock_percent 종목별 비중
@@ -59,6 +48,7 @@ function calculateAssets(resultsWithCurrentPrice) {
             stock_name: stock.stock_name,
             stock_code : stock.stock_code,
             stock_assets: stock_assets,
+            current_price: stock.current_price,
         });
     });
 
@@ -94,8 +84,10 @@ router.get("/", function(req, res, next){
             // res.json(results)
 
             const promises = results.map(async (stock) => {
+        
                 const currentPrice = await getCurrentPrice(stock.stock_code);
-  
+                console.log(currentPrice)
+                
 
                 return {
                     ...stock,
@@ -118,26 +110,38 @@ router.get("/", function(req, res, next){
 
 
 //관심종목
-router.get("/like", function(req, res, next){
-    pool.getConnection((err,conn)=>{
+router.get("/like", async function(req, res, next){
+    pool.getConnection(async (err,conn)=>{
         if(err){
             console.error("DB Disconnected:",err);
             return;
         }
   
-        conn.query(LikeStockQueries.LikeStockQueries, [req.query.user_id], (err,results)=>{
+        conn.query(LikeStockQueries.LikeStockQueries, [req.query.user_id], async (err,results)=>{
             conn.release();
             
             if(err){
                 console.log("Query Error:",err)
                 return
             }
-            res.json(results)
+            // 각 주식에 대해 추가 정보를 가져옵니다.
+            const resultsWithPrice = await Promise.all(results.map(async (item) => {
+                try {
+                    console.log(item.stock_code)
+                    const redis_data = await redisConnect.get(item.stock_code);
+                    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+                    item.current_price = stock_data.output2 ? stock_data.output2.stck_prpr : "불러오는 중..";
+                } catch (error) {
+                    console.error(error);
+                    item.current_price = "가격 정보 불러오는 중..";
+                }
+                return item;
+            }));
+            res.json(resultsWithPrice);
         })
-  
     })
-  
-})
+});
+
 
 //관심종목 등록
 router.post("/like", function(req,res){
