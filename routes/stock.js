@@ -209,33 +209,97 @@ router.get("/liveRanking/:type", async (req, res, next) => {
         },
       }
     );
-
     const liveRankingData = await Promise.all(
       response.data.dataBody.map(async (item) => {
         try {
           // Redis에서 현재 가격 정보 조회
           const price = await redisConnect.get(item.stock_code);
-
           console.log(price);
           // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
           item.current_price = price
             ? JSON.parse(price).output2.stck_prpr
             : "불러오는 중..";
-          return item;
+          return {
+            rank: item.rank,
+            stock_name: item.stbd_nm,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
         } catch (err) {
           console.error(err);
           item.current_price = "가격 정보 불러오는 중..";
-          return item;
+          return {
+            rank: item.rank,
+            stock_name: item.stbd_nm,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
         }
       })
     );
-
     res.json(liveRankingData);
-
-    // res.json(response.data.dataBody);
   } catch (err) {
     console.error(err);
     res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+router.get("/initial/:stock_code", async (req, res, next) => {
+  try {
+    const stock_code = req.params.stock_code;
+    const redis_data = await redisConnect.get(stock_code);
+    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+    res.json(stock_data);
+  } catch (error) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+//종목 추천
+router.get("/recommend", async (req, res, next) => {
+  const apiKey = process.env.SHINHAN_API_KEY;
+  try {
+    const response = await axios.get(
+      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/recommend/portfolio",
+      {
+        headers: {
+          apiKey: apiKey,
+        },
+      }
+    );
+    const Data = await Promise.all(
+      response.data.dataBody.list.map(async (item) => {
+        try {
+          // Redis에서 현재 가격 정보 조회
+          const price = await redisConnect.get(item.stock_code);
+          console.log(price);
+          // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
+          item.current_price = price
+            ? JSON.parse(price).output2.stck_prpr
+            : "불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        } catch (err) {
+          console.error(err);
+          item.current_price = "가격 정보 불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        }
+      })
+    );
+    res.json(Data);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ message: "fail" });
     next(err);
   }
 });
@@ -464,6 +528,42 @@ router.get("/graph/:code", async (req, res, next) => {
   } catch (error) {
     console.error("Error:", error);
   }
+});
+
+router.get("/kospitop5", function (req, res, next) {
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+    conn.query(searchstockQueries.kospitop5Queries, (err, results) => {
+      conn.release();
+
+      if (err) {
+        console.log("Query Error:", err);
+        return;
+      }
+      res.json(results);
+    });
+  });
+});
+
+router.get("/kosdaqtop5", function (req, res, next) {
+  pool.getConnection((err, conn) => {
+    if (err) {
+      console.error("DB Disconnected:", err);
+      return;
+    }
+    conn.query(searchstockQueries.kosdaqtop5Queries, (err, results) => {
+      conn.release();
+
+      if (err) {
+        console.log("Query Error:", err);
+        return;
+      }
+      res.json(results);
+    });
+  });
 });
 
 router.get("/myStock/:user_id", async (req, res, next) => {
