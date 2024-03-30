@@ -14,7 +14,7 @@ LIMIT 5; `;
 
 const getAllChatsByStockcodeLIMIT = `SELECT chat_id, user_id, stock_code, content, created_at 
 FROM Chat 
-WHERE stock_code = ?
+WHERE stock_code = ? AND user_id != 0
 ORDER BY created_at DESC
 LIMIT ?`;
 
@@ -33,6 +33,9 @@ const insertChat = `INSERT INTO Chat (user_id, stock_code, stock_name, content, 
 VALUES (?,?,?,?,?);
 `;
 
+const getroomList = `SELECT stock_code, stock_name FROM Chat WHERE stock_name LIKE ? GROUP BY stock_code, stock_name`
+
+
 module.exports = {
   getAllCommunityList,
   getHotCommunityList,
@@ -42,4 +45,5 @@ module.exports = {
   getAllChatsByUserid,
   getAllChatsByChatid,
   insertChat,
+  getroomList
 };
