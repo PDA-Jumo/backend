@@ -86,6 +86,27 @@ router.get("/issue", async (req, res, next) => {
   }
 });
 
+router.get("/recommend", async (req, res, next) => {
+  const apiKey = process.env.REACT_APP_SHINHAN_API_KEY;
+  try {
+    const response = await axios.get(
+      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/recommend/portfolio",
+      {
+        headers: {
+          apiKey: apiKey,
+        },
+      }
+    );
+    // console.log(response);
+
+    res.json(response.data.dataBody.list);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
 // 코스피 코스닥 지수, (개인/외국인/기관) 정보 GET
 router.get("/liveSise", async (req, res, next) => {
   try {
@@ -173,8 +194,8 @@ router.get("/theme", async (req, res, next) => {
     next(err);
   }
 });
-const { promisify } = require("util");
-const getAsync = promisify(redisConnect.get).bind(redisConnect);
+// const { promisify } = require("util");
+// const getAsync = promisify(redisConnect.get).bind(redisConnect);
 // 실시간 종목 순위 GET
 router.get("/liveRanking/:type", async (req, res, next) => {
   try {
@@ -213,6 +234,19 @@ router.get("/liveRanking/:type", async (req, res, next) => {
 
     // res.json(response.data.dataBody);
   } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+router.get("/initial/:stock_code", async (req, res, next) => {
+  try {
+    const stock_code = req.params.stock_code;
+    const redis_data = await redisConnect.get(stock_code);
+    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+    res.json(stock_data);
+  } catch (error) {
     console.error(err);
     res.status(400).json({ message: "fail" });
     next(err);
