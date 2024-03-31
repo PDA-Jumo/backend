@@ -128,7 +128,7 @@ router.get("/:stock_code", function (req, res, next) {
 
 router.post("/create/:stock_code", function (req, res, next) {
   const stock_code = req.params.stock_code;
-  const { user_id, stock_name, content, created_at } = req.body;
+  const { user_id, nickname, stock_name, content, created_at } = req.body;
   console.log(user_id, stock_name, content);
 
   pool.getConnection((err, conn) => {
@@ -140,7 +140,7 @@ router.post("/create/:stock_code", function (req, res, next) {
     // 2. 쿼리 실행
     conn.query(
       communityQueries.insertChat,
-      [user_id, stock_code, stock_name, content, created_at],
+      [user_id, nickname, stock_code, stock_name, content, created_at],
       (error, rows) => {
         // 3. pool 연결 반납
         conn.release();
