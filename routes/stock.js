@@ -682,14 +682,19 @@ router.get("/kospitop5", (req, res, next) => {
           console.log("Query Error:", err);
           return;
         }
+        console.log("여기여기", results);
+        for (var stock of results) {
+          const redis_data = await redisConnect.get(stock.stock_code);
+          const stock_data = redis_data
+            ? JSON.parse(redis_data)
+            : "불러오는 중..";
+          console.log(stock_data);
 
-        // 코스피 시총 1~5위 종목을 Redis에서 price 가져오기
-        const redis_data = await redisConnect.get(stock_code);
-        const stock_data = redis_data
-          ? JSON.parse(redis_data)
-          : "불러오는 중..";
-        console.log(stock_data);
+          // 각 종목의 데이터를 results 배열에 추가
+          stock.stock_price = stock_data.output2.stck_prpr;
+        }
 
+        console.log(results);
         res.json(results);
       });
     });
@@ -706,13 +711,28 @@ router.get("/kosdaqtop5", function (req, res, next) {
       console.error("DB Disconnected:", err);
       return;
     }
-    conn.query(searchstockQueries.kosdaqtop5Queries, (err, results) => {
+    conn.query(searchstockQueries.kosdaqtop5Queries, async (err, results) => {
       conn.release();
 
       if (err) {
         console.log("Query Error:", err);
         return;
       }
+
+      console.log("여기여기", results);
+      for (var stock of results) {
+        const redis_data = await redisConnect.get(stock.stock_code);
+        const stock_data = redis_data
+          ? JSON.parse(redis_data)
+          : "불러오는 중..";
+        console.log(stock_data);
+
+        // 각 종목의 데이터를 results 배열에 추가
+        stock.stock_price = stock_data.output2.stck_prpr;
+      }
+
+      console.log(results);
+
       res.json(results);
     });
   });
