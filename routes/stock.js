@@ -684,11 +684,11 @@ router.get("/kospitop5", (req, res, next) => {
         }
 
         // 코스피 시총 1~5위 종목을 Redis에서 price 가져오기
-        const redis_data = await redisConnect.get(stock_code);
-        const stock_data = redis_data
-          ? JSON.parse(redis_data)
-          : "불러오는 중..";
-        console.log(stock_data);
+        // const redis_data = await redisConnect.get(stock_code);
+        // const stock_data = redis_data
+        //   ? JSON.parse(redis_data)
+        //   : "불러오는 중..";
+        // console.log(stock_data);
 
         res.json(results);
       });
