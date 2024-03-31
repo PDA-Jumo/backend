@@ -1,6 +1,7 @@
 require("dotenv").config();
 const redisConnect = require("../../models/redis/redisConnect");
 const subscriber = redisConnect.duplicate();
+const { buyTransaction, sellTransaction } = require("../stock/conclusion");
 
 module.exports = function (io) {
   (async () => {
@@ -12,8 +13,16 @@ module.exports = function (io) {
 
       // 각 방마다 subscribe 하도록
       channels.forEach((channel) => {
-        subscriber.subscribe(channel, (data) => {
+        subscriber.subscribe(channel, async (data) => {
           io.to(channel).emit("stock_update", JSON.parse(data));
+          // await buyTransaction(
+          //   JSON.parse(data).code,
+          //   JSON.parse(data).output2.stck_prpr
+          // );
+          await sellTransaction(
+            JSON.parse(data).code,
+            JSON.parse(data).output2.stck_prpr
+          );
         });
       });
 
