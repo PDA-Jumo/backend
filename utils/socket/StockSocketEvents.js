@@ -1,6 +1,8 @@
 require("dotenv").config();
 const redisConnect = require("../../models/redis/redisConnect");
 const subscriber = redisConnect.duplicate();
+const pool = require("../../models/dbConnect");
+const stockQueries = require("../../models/queries/stockQueries");
 const { buyTransaction, sellTransaction } = require("../stock/conclusion");
 
 module.exports = function (io) {
@@ -11,7 +13,7 @@ module.exports = function (io) {
       const channels = await subscriber.keys("*");
       console.log("CHANNELS : ", channels, channels.length);
 
-      // 각 방마다 subscribe 하도록
+      // stock detail : 각 room마다 subscribe
       channels.forEach((channel) => {
         subscriber.subscribe(channel, async (data) => {
           io.to(channel).emit("stock_update", JSON.parse(data));
@@ -23,6 +25,31 @@ module.exports = function (io) {
             JSON.parse(data).code,
             JSON.parse(data).output2.stck_prpr
           );
+        });
+      });
+
+      // main kospi, kosdaq 실시간 가격 처리
+      pool.getConnection((err, conn) => {
+        // 코스피 200 중 상위 5개
+        conn.query(stockQueries.getKOSPI, [5], (error, rows) => {
+          conn.release();
+          // 5개 종목 실시간 가격 처리를 위한 subscribe
+          rows.forEach((row) => {
+            subscriber.subscribe(row.stock_code, (data) => {
+              io.to("main").emit(`current_${row.stock_code}`, JSON.parse(data));
+            });
+          });
+        });
+      });
+      pool.getConnection((err, conn) => {
+        conn.query(stockQueries.getKOSDAQ, [5], (error, rows) => {
+          conn.release();
+          // 5개 종목 실시간 가격 처리를 위한 subscribe
+          rows.forEach((row) => {
+            subscriber.subscribe(row.stock_code, (data) => {
+              io.to("main").emit(`current_${row.stock_code}`, JSON.parse(data));
+            });
+          });
         });
       });
     } catch (err) {
