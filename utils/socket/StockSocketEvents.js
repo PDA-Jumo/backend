@@ -25,14 +25,6 @@ module.exports = function (io) {
           );
         });
       });
-
-      // subscriber.on("message", (channel, message) => {
-      //   console.log(`Message from channel ${channel}: ${message}`);
-      //   const data = JSON.parse(message);
-
-      //   console.log(`[${channel}] Stock data updated:`, data);
-      //   io.to(channel).emit("stock_update", data);
-      // });
     } catch (err) {
       console.error("Redis 작업 중 오류 발생:", err);
     }

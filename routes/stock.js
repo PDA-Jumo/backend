@@ -5,6 +5,7 @@ var cheerio = require("cheerio");
 require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const buySellQueries = require("../models/queries/stock/buySellQueries");
+const userQueries = require("../models/queries/userQueries");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -41,6 +42,32 @@ router.get("/search", function (req, res, next) {
   });
 });
 
+router.get("/kospiRanking", async (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(
+        searchstockQueries.searchRandomKospiQueries,
+        (err, results) => {
+          conn.release();
+
+          if (err) {
+            console.log("Query Error:", err);
+            return;
+          }
+          res.json(results);
+        }
+      );
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
+});
+
 // 마켓 이슈 GET
 router.get("/issue", async (req, res, next) => {
   try {
@@ -60,6 +87,27 @@ router.get("/issue", async (req, res, next) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get("/recommend", async (req, res, next) => {
+  const apiKey = process.env.REACT_APP_SHINHAN_API_KEY;
+  try {
+    const response = await axios.get(
+      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/recommend/portfolio",
+      {
+        headers: {
+          apiKey: apiKey,
+        },
+      }
+    );
+    // console.log(response);
+
+    res.json(response.data.dataBody.list);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ message: "fail" });
+    next(err);
   }
 });
 
@@ -124,23 +172,38 @@ router.get("/liveSise", async (req, res, next) => {
 });
 
 // 지금 주목받는 테마
+// router.get("/theme", async (req, res, next) => {
+//   try {
+//     const response = await get10StockThemes(
+//       req.query.ordering ? req.query.ordering : "desc"
+//     );
+//     res.json(response);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(400).json({ message: "fail" });
+//     next(err);
+//   }
+// });
+
 router.get("/theme", async (req, res, next) => {
   try {
-    const response = await get10StockThemes(
-      req.query.ordering ? req.query.ordering : "desc"
+    const response = await axios.get(
+      "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
-    res.json(response);
+    res.json(response.data);
   } catch (err) {
+    console.log("error", err);
     console.error(err);
     res.status(400).json({ message: "fail" });
     next(err);
   }
 });
-
+// const { promisify } = require("util");
+// const getAsync = promisify(redisConnect.get).bind(redisConnect);
 // 실시간 종목 순위 GET
-router.get("/liveRanking", async (req, res, next) => {
+router.get("/liveRanking/:type", async (req, res, next) => {
   try {
-    const type = req.body.type;
+    const type = req.params.type;
     const apiKey = req.headers.apikey;
     const response = await axios.get(
       `https://gapi.shinhaninvest.com:8443/openapi/v1.0/ranking/issue?query_type=${type}`,
@@ -150,8 +213,108 @@ router.get("/liveRanking", async (req, res, next) => {
         },
       }
     );
-    res.json(response.data.dataBody);
+    const liveRankingData = await Promise.all(
+      response.data.dataBody.map(async (item) => {
+        try {
+          // Redis에서 현재 가격 정보 조회
+          const price = await redisConnect.get(item.stock_code);
+          console.log(price);
+          // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
+          item.current_price = price
+            ? JSON.parse(price).output2.stck_prpr
+            : "불러오는 중..";
+          return {
+            rank: item.rank,
+            stock_name: item.stbd_nm,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        } catch (err) {
+          console.error(err);
+          item.current_price = "가격 정보 불러오는 중..";
+          return {
+            rank: item.rank,
+            stock_name: item.stbd_nm,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        }
+      })
+    );
+    res.json(liveRankingData);
   } catch (err) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+router.get("/initial/:stock_code", async (req, res, next) => {
+  try {
+    const stock_code = req.params.stock_code;
+    const redis_data = await redisConnect.get(stock_code);
+    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+    res.json(stock_data);
+  } catch (error) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+//종목 추천
+router.get("/recommend", async (req, res, next) => {
+  const apiKey = process.env.SHINHAN_API_KEY;
+  try {
+    const response = await axios.get(
+      "https://gapi.shinhaninvest.com:8443/openapi/v1.0/recommend/portfolio",
+      {
+        headers: {
+          apiKey: apiKey,
+        },
+      }
+    );
+    const Data = await Promise.all(
+      response.data.dataBody.list.map(async (item) => {
+        try {
+          // Redis에서 현재 가격 정보 조회
+          const price = await redisConnect.get(item.stock_code);
+          console.log(price);
+          // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
+          item.current_price = price
+            ? JSON.parse(price).output2.stck_prpr
+            : "불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        } catch (err) {
+          console.error(err);
+          item.current_price = "가격 정보 불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        }
+      })
+    );
+    res.json(Data);
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+router.get("/initial/:stock_code", async (req, res, next) => {
+  try {
+    const stock_code = req.params.stock_code;
+    const redis_data = await redisConnect.get(stock_code);
+    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+    res.json(stock_data);
+  } catch (error) {
     console.error(err);
     res.status(400).json({ message: "fail" });
     next(err);
