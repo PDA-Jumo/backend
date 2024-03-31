@@ -11,6 +11,10 @@ const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
 const financedata = require("../models/finance");
 const redisConnect = require("../models/redis/redisConnect");
+const {
+  buyTransactionSuccessfully,
+  sellTransactionSuccessfully,
+} = require("../utils/stock/conclusion");
 
 //종목 검색
 router.get("/search", function (req, res, next) {
@@ -372,26 +376,27 @@ router.post("/buy", async (req, res, next) => {
           conn.query(buySellQueries.buySellQueries, buyData, (err, results) => {
             console.log("검사", results);
             if (results.affectedRows > 0) {
-              // 7. 주문 성공 후 사용자의 현금 잔액 업데이트
-              conn.query(
-                buySellQueries.updateUserCash,
-                [total_price, user_id],
-                (err, results) => {
-                  // 8. pool 연결 반납
-                  conn.release();
-                  console.log(
-                    "매수 주문 성공 및 사용자 현금 잔액 업데이트 성공"
-                  );
-                  if (err) {
-                    console.log("Query Error:", err);
-                    return;
-                  }
-                  if (results.affectedRows > 0) {
-                    console.log("검사2", results);
-                    res.send("매수 주문, 사용자 현금 잔액 업데이트 성공");
-                  }
-                }
-              );
+              res.send("매수 주문 성공");
+              // // 7. 주문 성공 후 사용자의 현금 잔액 업데이트
+              // conn.query(
+              //   buySellQueries.updateUserCash,
+              //   [total_price, user_id],
+              //   (err, results) => {
+              //     // 8. pool 연결 반납
+              //     conn.release();
+              //     console.log(
+              //       "매수 주문 성공 및 사용자 현금 잔액 업데이트 성공"
+              //     );
+              //     if (err) {
+              //       console.log("Query Error:", err);
+              //       return;
+              //     }
+              //     if (results.affectedRows > 0) {
+              //       console.log("검사2", results);
+              //       res.send("매수 주문, 사용자 현금 잔액 업데이트 성공");
+              //     }
+              //   }
+              // );
             }
           });
         }
@@ -445,7 +450,8 @@ router.post("/sell", async (req, res, next) => {
 });
 
 // 3. 매도 가능 수량 조회
-// NOTE: 매도 가능 수량은 '실제 가지고 있는 종목 갯수 - 매도 주문 가격 갯수`
+// NOTE: 매도 가능 수량은 '(실제 가지고 있는 종목 갯수*평균가격 - 모든 매도 주문 가격 갯수*각 주문 가격)/현재가`
+// 이 API는 (실제 가지고 있는 종목 갯수 * 평균 가격 - 모든 매도 주문 가격 갯수 * 각 주문 가격)까지
 // '분할 매도'를 위함
 router.get("/sellquantity/:user_id/:stock_code", async (req, res, next) => {
   try {
@@ -474,7 +480,7 @@ router.get("/sellquantity/:user_id/:stock_code", async (req, res, next) => {
           console.log(results);
 
           // 결과가 없거나 매도 가능 수량이 없을 경우 0 반환
-          if (results[0].available_quantity === undefined) {
+          if (results.length === 0) {
             console.log("매도 수량 조회 성공 - 매도 가능 수량 없음");
             res.json(0);
           } else {
@@ -485,6 +491,114 @@ router.get("/sellquantity/:user_id/:stock_code", async (req, res, next) => {
         }
       );
     });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
+// 4. 매수 가능 수량 조회
+// NOTE: 매수 가능 수량은 '(내가 가진 cash - 매수 주문된 전체 가격) / 현재가`
+// '분할 매도'를 위함
+router.get("/buyquantity/:user_id/:stock_code", async (req, res, next) => {
+  try {
+    const quantityData = [req.params.user_id, req.params.stock_code];
+
+    // 3. pool 연결 후 쿼리 실행
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("MySQL 연결 에러:", err);
+        return;
+      }
+
+      // 4. MySQL에 데이터 삽입
+      conn.query(
+        buySellQueries.getUserCash,
+        [req.params.user_id],
+        (err, cash) => {
+          if (err) {
+            console.error("MySQL DB 데이터 업데이트 에러:", err);
+            res.status(500).send("서버 에러");
+            return;
+          }
+          console.log(req.params.user_id, "의 cash는 :", cash[0].cash);
+
+          conn.query(
+            buySellQueries.getBuyQuantity,
+            quantityData,
+            (err, results) => {
+              // 결과가 없을 경우 NULL
+              if (results.length === 0) {
+                console.log("주문된 매수 총 가격 조회 성공 - NULL");
+
+                res.json(cash[0].cash);
+              } else {
+                console.log("주문된 매수 총 가격 조회 성공");
+                console.log(results[0].total_purchase);
+                res.json(cash[0].cash - results[0].total_purchase);
+              }
+              // 5. pool 연결 반납
+              conn.release();
+            }
+          );
+        }
+      );
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
+// 5. 주식 초기값 조회
+router.get("/initial/:stock_code", async (req, res, next) => {
+  try {
+    const stock_code = req.params.stock_code;
+    const redis_data = await redisConnect.get(stock_code);
+    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
+    console.log(stock_data);
+    res.json(stock_data);
+  } catch (error) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
+});
+
+// 6. 매수 바로 체결
+router.post("/buy/successfully", async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, stock_code, quantity, transaction_price } = req.body;
+    buyTransactionSuccessfully(
+      user_id,
+      stock_code,
+      quantity,
+      transaction_price
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(400);
+    res.send("실패");
+    next(err);
+  }
+});
+
+// 7. 매도 바로 체결
+router.post("/sell/successfully", async (req, res, next) => {
+  try {
+    // 1. 사용자에게 email, password 받음
+    const { user_id, stock_code, quantity, transaction_price } = req.body;
+    sellTransactionSuccessfully(
+      user_id,
+      stock_code,
+      quantity,
+      transaction_price
+    );
   } catch (err) {
     console.error(err);
     res.status(400);
@@ -551,66 +665,6 @@ router.get("/graph/:code", async (req, res, next) => {
     res.json(stockgraph);
   } catch (error) {
     console.error("Error:", error);
-  }
-});
-
-router.get("/kospitop5", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-    conn.query(searchstockQueries.kospitop5Queries, (err, results) => {
-      conn.release();
-
-      if (err) {
-        console.log("Query Error:", err);
-        return;
-      }
-      res.json(results);
-    });
-  });
-});
-
-router.get("/kosdaqtop5", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-    conn.query(searchstockQueries.kosdaqtop5Queries, (err, results) => {
-      conn.release();
-
-      if (err) {
-        console.log("Query Error:", err);
-        return;
-      }
-      res.json(results);
-    });
-  });
-});
-
-router.get("/myStock/:user_id", async (req, res, next) => {
-  try {
-    const user = [req.params.user_id];
-    pool.getConnection((err, conn) => {
-      if (err) {
-        console.error("DB Disconnected:", err);
-        return;
-      }
-
-      conn.query(userQueries.findMyStockByUserID, user, (err, results) => {
-        conn.release();
-
-        if (err) {
-          console.log("Query Error:", err);
-          return;
-        }
-        res.json(results);
-      });
-    });
-  } catch (error) {
-    console.error("Error", error);
   }
 });
 
