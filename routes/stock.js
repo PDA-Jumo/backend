@@ -97,9 +97,33 @@ router.get("/recommend", async (req, res, next) => {
         },
       }
     );
-    // console.log(response);
-
-    res.json(response.data.dataBody.list);
+    const Data = await Promise.all(
+      response.data.dataBody.list.map(async (item) => {
+        try {
+          // Redis에서 현재 가격 정보 조회
+          const price = await redisConnect.get(item.stock_code);
+          console.log(price);
+          // 가격 정보가 없으면 기본 메시지 설정(json형식으로 변경)
+          item.current_price = price
+            ? JSON.parse(price).output2.stck_prpr
+            : "불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        } catch (err) {
+          console.error(err);
+          item.current_price = "가격 정보 불러오는 중..";
+          return {
+            stock_name: item.stbd_name,
+            stock_code: item.stock_code,
+            current_price: item.current_price,
+          };
+        }
+      })
+    );
+    res.json(Data);
   } catch (err) {
     console.error(err);
     return res.status(400).json({ message: "fail" });
