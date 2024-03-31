@@ -10,5 +10,7 @@ const stock = io.of("/stock");
 
 require("./CommunitySocketEvents")(community);
 require("./StockSocketEvents")(stock);
+require("./StockAskingSocketEvents")(stock);
+require("./StockPriceSocket")(stock);
 
 module.exports = io;
