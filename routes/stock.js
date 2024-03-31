@@ -637,7 +637,7 @@ async function getStockDetail(code) {
   }
 }
 
-router.get("/detail/:code/:name", async (req, res, next) => {
+router.get("/detail/:code", async (req, res, next) => {
   const code = req.params.code;
   try {
     const stockDetail = await getStockDetail(code);
@@ -668,23 +668,38 @@ router.get("/graph/:code", async (req, res, next) => {
   }
 });
 
-router.get("/kospitop5", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-    conn.query(searchstockQueries.kospitop5Queries, (err, results) => {
-      conn.release();
-
+router.get("/kospitop5", (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
       if (err) {
-        console.log("Query Error:", err);
+        console.error("DB Disconnected:", err);
         return;
       }
-      res.json(results);
+      conn.query(searchstockQueries.kospitop5Queries, async (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+
+        // 코스피 시총 1~5위 종목을 Redis에서 price 가져오기
+        const redis_data = await redisConnect.get(stock_code);
+        const stock_data = redis_data
+          ? JSON.parse(redis_data)
+          : "불러오는 중..";
+        console.log(stock_data);
+
+        res.json(results);
+      });
     });
-  });
+  } catch (error) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
 });
+
 router.get("/kosdaqtop5", function (req, res, next) {
   pool.getConnection((err, conn) => {
     if (err) {
