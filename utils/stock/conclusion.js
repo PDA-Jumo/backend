@@ -16,7 +16,6 @@ async function buyTransaction(stock_code, price) {
       price,
     ]);
 
-    console.log("여기", results);
     for (const transaction of results) {
       console.log("반복", transaction);
       const [userResults] = await conn.query(buySellQueries.conclusionBuyUser, [
