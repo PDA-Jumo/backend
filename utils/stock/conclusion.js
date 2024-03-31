@@ -30,7 +30,7 @@ async function buyTransaction(stock_code, price) {
         buySellQueries.conclusionGetStockData,
         [transaction.stock_code]
       );
-      console.log("여기여기", stockData);
+      console.log(stockData);
       console.log(`${transaction.stock_code}가 조회 되었습니다.`);
 
       const [myStockResults] = await conn.query(
@@ -98,7 +98,6 @@ async function sellTransaction(stock_code, price) {
       price,
     ]);
 
-    console.log("여기", results);
     for (const transaction of results) {
       console.log("반복", transaction);
       const [userResults] = await conn.query(
@@ -172,7 +171,7 @@ async function buyTransactionSuccessfully(
       buySellQueries.conclusionGetStockData,
       [stock_code]
     );
-    console.log("여기여기", stockData);
+    console.log(stockData);
     console.log(`${stock_code}가 조회 되었습니다.`);
 
     const [myStockResults] = await conn.query(
