@@ -703,4 +703,28 @@ router.get("/kosdaqtop5", function (req, res, next) {
   });
 });
 
+router.get("/myStock/:user_id", async (req, res, next) => {
+  try {
+    const user = [req.params.user_id];
+    pool.getConnection((err, conn) => {
+      if (err) {
+        console.error("DB Disconnected:", err);
+        return;
+      }
+
+      conn.query(userQueries.findMyStockByUserID, user, (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        res.json(results);
+      });
+    });
+  } catch (error) {
+    console.error("Error", error);
+  }
+});
+
 module.exports = router;
