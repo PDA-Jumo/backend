@@ -6,7 +6,7 @@ require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const buySellQueries = require("../models/queries/stock/buySellQueries");
 const userQueries = require("../models/queries/userQueries");
-const findtokenQueries = require("../models/queries/stock/token")
+const findtokenQueries = require("../models/queries/stock/token");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -352,26 +352,6 @@ router.post("/buy", async (req, res, next) => {
             console.log("검사", results);
             if (results.affectedRows > 0) {
               res.send("매수 주문 성공");
-              // // 7. 주문 성공 후 사용자의 현금 잔액 업데이트
-              // conn.query(
-              //   buySellQueries.updateUserCash,
-              //   [total_price, user_id],
-              //   (err, results) => {
-              //     // 8. pool 연결 반납
-              //     conn.release();
-              //     console.log(
-              //       "매수 주문 성공 및 사용자 현금 잔액 업데이트 성공"
-              //     );
-              //     if (err) {
-              //       console.log("Query Error:", err);
-              //       return;
-              //     }
-              //     if (results.affectedRows > 0) {
-              //       console.log("검사2", results);
-              //       res.send("매수 주문, 사용자 현금 잔액 업데이트 성공");
-              //     }
-              //   }
-              // );
             }
           });
         }
@@ -504,10 +484,12 @@ router.get("/buyquantity/:user_id/:stock_code", async (req, res, next) => {
             buySellQueries.getBuyQuantity,
             quantityData,
             (err, results) => {
+              console.log(cash);
+              console.log(results);
+              console.log(results.length);
               // 결과가 없을 경우 NULL
-              if (results.length === 0) {
+              if (results[0].total_purchase === null) {
                 console.log("주문된 매수 총 가격 조회 성공 - NULL");
-
                 res.json(cash[0].cash);
               } else {
                 console.log("주문된 매수 총 가격 조회 성공");
@@ -631,12 +613,11 @@ async function getStockDetail(code) {
   });
 }
 
-
 router.get("/detail/:code", async (req, res, next) => {
   const code = req.params.code;
   try {
     const stockDetail = await getStockDetail(code);
-    console.log("이거야!!!",stockDetail)
+    console.log("이거야!!!", stockDetail);
     res.json(stockDetail);
   } catch (error) {
     console.error("Error:", error);
@@ -689,6 +670,12 @@ router.get("/kospitop5", (req, res, next) => {
           // 각 종목의 데이터를 results 배열에 추가
           stock.stock_price = stock_data.output2.stck_prpr;
         }
+        // 코스피 시총 1~5위 종목을 Redis에서 price 가져오기
+        // const redis_data = await redisConnect.get(stock_code);
+        // const stock_data = redis_data
+        //   ? JSON.parse(redis_data)
+        //   : "불러오는 중..";
+        // console.log(stock_data);
 
         console.log(results);
         res.json(results);

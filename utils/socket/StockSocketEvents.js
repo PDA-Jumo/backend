@@ -17,10 +17,10 @@ module.exports = function (io) {
       channels.forEach((channel) => {
         subscriber.subscribe(channel, async (data) => {
           io.to(channel).emit("stock_update", JSON.parse(data));
-          // await buyTransaction(
-          //   JSON.parse(data).code,
-          //   JSON.parse(data).output2.stck_prpr
-          // );
+          await buyTransaction(
+            JSON.parse(data).code,
+            JSON.parse(data).output2.stck_prpr
+          );
           await sellTransaction(
             JSON.parse(data).code,
             JSON.parse(data).output2.stck_prpr

@@ -82,23 +82,29 @@ async function buyTransaction(stock_code, price) {
     if (conn) conn.release();
   }
 }
-
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 // stock_code와 price는 함수를 호출할 때 인자로 제공되어야 합니다.
 // stock_code: 종목 코드, price: 현재가
 async function sellTransaction(stock_code, price) {
-  if (stock_code === "005930") {
-    console.log("sell Transaction 호출됨", stock_code, price);
-  }
   let conn;
   try {
     conn = await pool.getConnection();
     // 1. Transaction 테이블에서 stock_code와 price를 통해 매수인 행들을 가져옴
+    await sleep(200);
     const [results] = await conn.query(buySellQueries.conclusionSell, [
       stock_code,
       price,
     ]);
+    await sleep(200);
+    // myStockResults 배열이 비어 있는 경우 함수 종료
+    if (results.length === 0) {
+      return; // 함수 실행 종료
+    }
 
     for (const transaction of results) {
+      console.log("반복", results);
       console.log("반복", transaction);
       const [userResults] = await conn.query(
         buySellQueries.conclusionSellUser,
@@ -115,7 +121,12 @@ async function sellTransaction(stock_code, price) {
         buySellQueries.conclusionGetMyStockWithUserIdANdStockCode,
         [transaction.user_id, transaction.stock_code]
       );
-      console.log(myStockResults[0].quantity);
+      // myStockResults 배열이 비어 있는 경우 함수 종료
+      if (myStockResults.length === 0) {
+        console.log("myStockResults가 비어 있습니다. 함수를 종료합니다.");
+        return; // 함수 실행 종료
+      }
+
       const allQuantity = myStockResults[0].quantity - transaction.quantity;
 
       // ( 내 주식 수량 - 주문 수량 ) 이 0일 경우
@@ -233,7 +244,12 @@ async function sellTransactionSuccessfully(
       buySellQueries.conclusionGetMyStockWithUserIdANdStockCode,
       [user_id, stock_code]
     );
-    console.log(myStockResults[0].quantity);
+
+    // myStockResults 배열이 비어 있는 경우 함수 종료
+    if (myStockResults.length === 0) {
+      console.log("myStockResults가 비어 있습니다. 함수를 종료합니다.");
+      return; // 함수 실행 종료
+    }
     const allQuantity = myStockResults[0].quantity - quantity;
 
     // ( 내 주식 수량 - 주문 수량 ) 이 0일 경우

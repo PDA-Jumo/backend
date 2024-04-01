@@ -181,9 +181,9 @@ router.put("/quiz", authenticate, async (req, res, next) => {
 
 router.put("/levelUp", authenticate, async (req, res, next) => {
   try {
-    const { bonus, user_id } = req.body;
+    const { bonus, user_id, level_name } = req.body;
 
-    const user = [bonus, bonus, user_id];
+    const user = [bonus, bonus, level_name, user_id];
     // 3. pool 연결 후 쿼리 실행
     pool.getConnection((err, conn) => {
       if (err) {
