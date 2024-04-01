@@ -16,7 +16,12 @@ async function getCurrentPrice(code) {
     try {
         const redis_data = await redisConnect.get(code);
         const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
-        return stock_data.output2.stck_prpr
+        console.log("stockdata임!!!!",stock_data)
+        if(stock_data !== "불러오는 중..")
+            return stock_data.output2.stck_prpr;
+        else 
+            return 0;
+       
       } catch (error) {
         console.error(error)
         res.status(400).json({ message: "fail" });
