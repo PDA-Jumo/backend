@@ -27,31 +27,6 @@ module.exports = function (io) {
           );
         });
       });
-
-      // main kospi, kosdaq 실시간 가격 처리
-      pool.getConnection((err, conn) => {
-        // 코스피 200 중 상위 5개
-        conn.query(stockQueries.getKOSPI, [5], (error, rows) => {
-          conn.release();
-          // 5개 종목 실시간 가격 처리를 위한 subscribe
-          rows.forEach((row) => {
-            subscriber.subscribe(row.stock_code, (data) => {
-              io.to("main").emit(`current_${row.stock_code}`, JSON.parse(data));
-            });
-          });
-        });
-      });
-      pool.getConnection((err, conn) => {
-        conn.query(stockQueries.getKOSDAQ, [5], (error, rows) => {
-          conn.release();
-          // 5개 종목 실시간 가격 처리를 위한 subscribe
-          rows.forEach((row) => {
-            subscriber.subscribe(row.stock_code, (data) => {
-              io.to("main").emit(`current_${row.stock_code}`, JSON.parse(data));
-            });
-          });
-        });
-      });
     } catch (err) {
       console.error("Redis 작업 중 오류 발생:", err);
     }

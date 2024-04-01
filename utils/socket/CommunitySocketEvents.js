@@ -39,11 +39,18 @@ module.exports = function (io) {
         message: content,
         created_at,
       } = data;
-
+      console.log(user_id, stock_name, nickname, content, created_at);
       pool.getConnection((err, conn) => {
         conn.query(
           communityQueries.insertChat,
-          [parseInt(user_id), stock_code, stock_name, content, created_at],
+          [
+            parseInt(user_id),
+            nickname,
+            stock_code,
+            stock_name,
+            content,
+            created_at,
+          ],
 
           (error, rows) => {
             console.log(`메시지 DB 저장 :: ${content}`);

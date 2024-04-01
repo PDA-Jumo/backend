@@ -274,19 +274,6 @@ router.get("/liveRanking/:type", async (req, res, next) => {
   }
 });
 
-router.get("/initial/:stock_code", async (req, res, next) => {
-  try {
-    const stock_code = req.params.stock_code;
-    const redis_data = await redisConnect.get(stock_code);
-    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
-    res.json(stock_data);
-  } catch (error) {
-    console.error(err);
-    res.status(400).json({ message: "fail" });
-    next(err);
-  }
-});
-
 //종목 추천
 router.get("/recommend", async (req, res, next) => {
   const apiKey = process.env.SHINHAN_API_KEY;
@@ -329,19 +316,6 @@ router.get("/recommend", async (req, res, next) => {
   } catch (err) {
     console.error(err);
     return res.status(400).json({ message: "fail" });
-    next(err);
-  }
-});
-
-router.get("/initial/:stock_code", async (req, res, next) => {
-  try {
-    const stock_code = req.params.stock_code;
-    const redis_data = await redisConnect.get(stock_code);
-    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
-    res.json(stock_data);
-  } catch (error) {
-    console.error(err);
-    res.status(400).json({ message: "fail" });
     next(err);
   }
 });
@@ -682,36 +656,71 @@ router.get("/graph/:code", async (req, res, next) => {
   }
 });
 
-router.get("/kospitop5", function (req, res, next) {
-  pool.getConnection((err, conn) => {
-    if (err) {
-      console.error("DB Disconnected:", err);
-      return;
-    }
-    conn.query(searchstockQueries.kospitop5Queries, (err, results) => {
-      conn.release();
-
+router.get("/kospitop5", (req, res, next) => {
+  try {
+    pool.getConnection((err, conn) => {
       if (err) {
-        console.log("Query Error:", err);
+        console.error("DB Disconnected:", err);
         return;
       }
-      res.json(results);
+      conn.query(searchstockQueries.kospitop5Queries, async (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.log("Query Error:", err);
+          return;
+        }
+        console.log("여기여기", results);
+        for (var stock of results) {
+          const redis_data = await redisConnect.get(stock.stock_code);
+          const stock_data = redis_data
+            ? JSON.parse(redis_data)
+            : "불러오는 중..";
+          console.log(stock_data);
+
+          // 각 종목의 데이터를 results 배열에 추가
+          stock.stock_price = stock_data.output2.stck_prpr;
+        }
+
+        console.log(results);
+        res.json(results);
+      });
     });
-  });
+  } catch (error) {
+    console.error(err);
+    res.status(400).json({ message: "fail" });
+    next(err);
+  }
 });
+
 router.get("/kosdaqtop5", function (req, res, next) {
   pool.getConnection((err, conn) => {
     if (err) {
       console.error("DB Disconnected:", err);
       return;
     }
-    conn.query(searchstockQueries.kosdaqtop5Queries, (err, results) => {
+    conn.query(searchstockQueries.kosdaqtop5Queries, async (err, results) => {
       conn.release();
 
       if (err) {
         console.log("Query Error:", err);
         return;
       }
+
+      console.log("여기여기", results);
+      for (var stock of results) {
+        const redis_data = await redisConnect.get(stock.stock_code);
+        const stock_data = redis_data
+          ? JSON.parse(redis_data)
+          : "불러오는 중..";
+        console.log(stock_data);
+
+        // 각 종목의 데이터를 results 배열에 추가
+        stock.stock_price = stock_data.output2.stck_prpr;
+      }
+
+      console.log(results);
+
       res.json(results);
     });
   });
