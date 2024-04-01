@@ -6,7 +6,7 @@ require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const buySellQueries = require("../models/queries/stock/buySellQueries");
 const userQueries = require("../models/queries/userQueries");
-const findtokenQueries = require("../models/queries/stock/token")
+const findtokenQueries = require("../models/queries/stock/token");
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -215,6 +215,22 @@ router.get("/theme", async (req, res, next) => {
     const response = await axios.get(
       "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
+    // // var data = response.data;
+
+    // // // 버블 정렬을 이용한 내림차순 정렬
+    // // for (let i = 0; i < data.length - 1; i++) {
+    // //   for (let j = 0; j < data.length - i - 1; j++) {
+    // //     if (data[j].stats.returns < data[j + 1].stats.returns) {
+    // //       // 인접한 두 요소의 순서를 바꿈
+    // //       let temp = data[j];
+    // //       data[j] = data[j + 1];
+    // //       data[j + 1] = temp;
+    // //     }
+    // //   }
+    // // }
+    // // console.log(data);
+    // console.log(response.data);
+
     res.json(response.data);
   } catch (err) {
     console.log("error", err);
@@ -484,10 +500,12 @@ router.get("/buyquantity/:user_id/:stock_code", async (req, res, next) => {
             buySellQueries.getBuyQuantity,
             quantityData,
             (err, results) => {
+              console.log(cash);
+              console.log(results);
+              console.log(results.length);
               // 결과가 없을 경우 NULL
-              if (results.length === 0) {
+              if (results[0].total_purchase === null) {
                 console.log("주문된 매수 총 가격 조회 성공 - NULL");
-
                 res.json(cash[0].cash);
               } else {
                 console.log("주문된 매수 총 가격 조회 성공");
@@ -611,12 +629,11 @@ async function getStockDetail(code) {
   });
 }
 
-
 router.get("/detail/:code", async (req, res, next) => {
   const code = req.params.code;
   try {
     const stockDetail = await getStockDetail(code);
-    console.log("이거야!!!",stockDetail)
+    console.log("이거야!!!", stockDetail);
     res.json(stockDetail);
   } catch (error) {
     console.error("Error:", error);
