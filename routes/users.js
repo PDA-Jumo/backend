@@ -76,8 +76,7 @@ router.post("/login", async (req, res) => {
     res.status(201).json(userData);
   } catch (err) {
     console.error(err);
-    res.status(400);
-    next(err);
+    res.status(400).json({ message: "로그인 실패" });
   }
 });
 
