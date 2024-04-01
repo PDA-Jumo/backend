@@ -92,15 +92,14 @@ async function sellTransaction(stock_code, price) {
   try {
     conn = await pool.getConnection();
     // 1. Transaction 테이블에서 stock_code와 price를 통해 매수인 행들을 가져옴
-    await sleep(300);
+    await sleep(200);
     const [results] = await conn.query(buySellQueries.conclusionSell, [
       stock_code,
       price,
     ]);
-    await sleep(300);
+    await sleep(200);
     // myStockResults 배열이 비어 있는 경우 함수 종료
     if (results.length === 0) {
-      console.log("results가 비어 있습니다. 함수를 종료합니다.");
       return; // 함수 실행 종료
     }
 

@@ -215,22 +215,6 @@ router.get("/theme", async (req, res, next) => {
     const response = await axios.get(
       "https://api.alphasquare.co.kr/theme/v2/leader-board?limit=10"
     );
-    // // var data = response.data;
-
-    // // // 버블 정렬을 이용한 내림차순 정렬
-    // // for (let i = 0; i < data.length - 1; i++) {
-    // //   for (let j = 0; j < data.length - i - 1; j++) {
-    // //     if (data[j].stats.returns < data[j + 1].stats.returns) {
-    // //       // 인접한 두 요소의 순서를 바꿈
-    // //       let temp = data[j];
-    // //       data[j] = data[j + 1];
-    // //       data[j + 1] = temp;
-    // //     }
-    // //   }
-    // // }
-    // // console.log(data);
-    // console.log(response.data);
-
     res.json(response.data);
   } catch (err) {
     console.log("error", err);
