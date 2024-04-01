@@ -273,19 +273,6 @@ router.get("/liveRanking/:type", async (req, res, next) => {
   }
 });
 
-router.get("/initial/:stock_code", async (req, res, next) => {
-  try {
-    const stock_code = req.params.stock_code;
-    const redis_data = await redisConnect.get(stock_code);
-    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
-    res.json(stock_data);
-  } catch (error) {
-    console.error(err);
-    res.status(400).json({ message: "fail" });
-    next(err);
-  }
-});
-
 //종목 추천
 router.get("/recommend", async (req, res, next) => {
   const apiKey = process.env.SHINHAN_API_KEY;
@@ -332,19 +319,6 @@ router.get("/recommend", async (req, res, next) => {
   }
 });
 
-router.get("/initial/:stock_code", async (req, res, next) => {
-  try {
-    const stock_code = req.params.stock_code;
-    const redis_data = await redisConnect.get(stock_code);
-    const stock_data = redis_data ? JSON.parse(redis_data) : "불러오는 중..";
-    res.json(stock_data);
-  } catch (error) {
-    console.error(err);
-    res.status(400).json({ message: "fail" });
-    next(err);
-  }
-});
-
 //// NOTE: 매수, 매도 관련 API
 // 1. 매수 주문
 router.post("/buy", async (req, res, next) => {
@@ -377,26 +351,6 @@ router.post("/buy", async (req, res, next) => {
             console.log("검사", results);
             if (results.affectedRows > 0) {
               res.send("매수 주문 성공");
-              // // 7. 주문 성공 후 사용자의 현금 잔액 업데이트
-              // conn.query(
-              //   buySellQueries.updateUserCash,
-              //   [total_price, user_id],
-              //   (err, results) => {
-              //     // 8. pool 연결 반납
-              //     conn.release();
-              //     console.log(
-              //       "매수 주문 성공 및 사용자 현금 잔액 업데이트 성공"
-              //     );
-              //     if (err) {
-              //       console.log("Query Error:", err);
-              //       return;
-              //     }
-              //     if (results.affectedRows > 0) {
-              //       console.log("검사2", results);
-              //       res.send("매수 주문, 사용자 현금 잔액 업데이트 성공");
-              //     }
-              //   }
-              // );
             }
           });
         }
