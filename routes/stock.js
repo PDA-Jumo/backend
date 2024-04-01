@@ -6,6 +6,7 @@ require("dotenv").config();
 const searchstockQueries = require("../models/queries/stock/searchstockQueries");
 const buySellQueries = require("../models/queries/stock/buySellQueries");
 const userQueries = require("../models/queries/userQueries");
+const findtokenQueries = require("../models/queries/stock/token")
 const pool = require("../models/dbConnect");
 const { get10StockThemes } = require("../utils/stock/stockService");
 const crawlnews = require("../models/crawlnews");
@@ -609,35 +610,48 @@ router.post("/sell/successfully", async (req, res, next) => {
 
 // 주식 상세 정보 가져오기
 async function getStockDetail(code) {
-  const url =
-    "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price";
-  const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    tr_id: "FHKST01010100",
-    Authorization: process.env.AUTHORIZATION,
-    appKey: process.env.APPKEY,
-    appSecret: process.env.APPSECRET,
-  };
-  const params = {
-    fid_cond_mrkt_div_code: "J",
-    fid_input_iscd: code,
-  };
 
-  try {
-    const response = await axios.get(url, { headers: headers, params: params });
-    return {
-      prpr: response.data.output.stck_prpr, //현재시세
-      per: response.data.output.per, //per
-      pbr: response.data.output.pbr, //pbr
-      hts_avls: response.data.output.hts_avls, //시가총액
-      hts_frgn_ehrt: response.data.output.hts_frgn_ehrt, //외국인 소진율
-    };
-  } catch (error) {
-    console.error("Error:", error);
-  }
+  pool.getConnection((err, conn) => {
+
+    conn.query(
+      findtokenQueries.findtokenQueries,
+      async (err, token) => {
+        conn.release();
+        console.log("토큰!!!", token[0].token)
+        const url =
+        "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price";
+        const headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        tr_id: "FHKST01010100",
+        Authorization: token[0].token,
+        appKey: process.env.APPKEY,
+        appSecret: process.env.APPSECRET,
+        };
+
+      const params = {
+        fid_cond_mrkt_div_code: "J",
+        fid_input_iscd: code,
+      };
+
+      try {
+        const response = await axios.get(url, { headers: headers, params: params });
+        return {
+        prpr: response.data.output.stck_prpr, //현재시세
+        per: response.data.output.per, //per
+        pbr: response.data.output.pbr, //pbr
+        hts_avls: response.data.output.hts_avls, //시가총액
+        hts_frgn_ehrt: response.data.output.hts_frgn_ehrt, //외국인 소진율
+      };
+      } catch (error) {
+      console.error("Error:", error);
+    }  
+    }
+    );
+  });
+  
 }
 
-router.get("/detail/:code/:name", async (req, res, next) => {
+router.get("/detail/:code", async (req, res, next) => {
   const code = req.params.code;
   try {
     const stockDetail = await getStockDetail(code);
